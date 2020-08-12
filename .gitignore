@@ -4,4 +4,6 @@
 .project
 *.o
 a.out
+*.dSYM
+main
 

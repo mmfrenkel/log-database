@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
-
+#include <stdlib.h>
+#include "two_three_tree.h"
 
 typedef struct tree_node {
 	int key;
@@ -19,19 +20,14 @@ typedef struct group {
 } Group;
 
 
-typedef struct two_three_tree {
-	Group *root;
-} TwoThreeTree;
-
-
 /*Inserts new Tree_Node into 2-3 Tree*/
-void insert_node(TwoThreeTree tttree, char *key, char *value) {
+void insert_node(TwoThreeTree *tttree, int key, char *value) {
 	Tree_Node *new_node = create_node(key, value);
 
 	if (!tttree->root) {
 		/* There aren't any groups in the tree yet; must create it */
 		Group *root_group = create_group();
-		root_group->left_child = new_node;
+		root_group->left_node = new_node;
 		tttree->root = root_group;
 	} else {
 		tttree->root = insert(tttree, new_node);
@@ -40,13 +36,13 @@ void insert_node(TwoThreeTree tttree, char *key, char *value) {
 
 
 /*Does the work of rearranging a tree to insert a new node */
-static Group* insert(TwoThreeTree tttree, Tree_Node *node) {
+static Group* insert(TwoThreeTree *tttree, Tree_Node *node) {
 
 	Group *root = tttree->root;
-	Group *returned_root;
+	Group *returned_root = root;
 
 	/* find the leaf node that the element should belong to */
-	Group *group = find_group(tttree->root, node);
+	Group *group = find_group(root, node);
 
 	/* Case 1: Insert Node into Group with Only 1 Data Element */
 	if (!group->right_node) {
@@ -59,13 +55,13 @@ static Group* insert(TwoThreeTree tttree, Tree_Node *node) {
 	}
 
 	if (returned_root->parent) {
-		return tttree->root;
+		return root;
 	} else {
 		return returned_root;
 	}
 }
 
-char * find_value(TwoThreeTree ttthree, int key) {
+char * find_value(TwoThreeTree *ttthree, int key) {
 
 	Tree_Node *result = search(ttthree->root, key);
 
@@ -88,7 +84,7 @@ static Tree_Node * search(Group *root, int key) {
 		return root->left_node;
 
 	} else if (key < root->left_node->key) {
-		return search_tree(root->left_child, key);
+		return search(root->left_child, key);
 
 	} else if (root->right_node) {
 
@@ -96,10 +92,10 @@ static Tree_Node * search(Group *root, int key) {
 			return root->right_node;
 		}
 		else if (key < root->right_node->key) {
-			return search_tree(root->middle_child, key);
+			return search(root->middle_child, key);
 		}
 		else {
-			return search_tree(root->right_child, key);
+			return search(root->right_child, key);
 		}
 	} else {
 		return NULL;
@@ -131,7 +127,7 @@ static void insert_case_one(Group *group, Tree_Node *node){
 
 	if (group->left_node->key == node->key) {
 		/* TO DO: will add to a linked list */
-		continue;
+		printf("key already exists; not yet implemented as linked list\n");
 	} else if (group->left_node->key < node->key) {
 		group->right_node = node;
 	} else {
@@ -216,7 +212,7 @@ Group * push_up(Group *parent_group, Group *new_group) {
 
 Group * split_three_node(Group *original_parent, Group *sift_group) {
 	/* First find which node needs to sift up */
-	Group *new_parent_group = create_new_group();
+	Group *new_parent_group = create_group();
 
 	if (sift_group->left_node->key > original_parent->left_node->key
 			&& sift_group->left_node->key < original_parent->right_node->key) {

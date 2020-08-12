@@ -1,14 +1,16 @@
-typedef struct node Tree_Node;
+typedef struct tree_node Tree_Node;
 
 typedef struct group Group;
 
-typedef struct two_three_tree TwoThreeTree;
+typedef struct two_three_tree {
+	Group *root;
+} TwoThreeTree;
 
-void insert_node(TwoThreeTree tttree, char *key, char *value);
+void insert_node(TwoThreeTree *tttree, int key, char *value);
 
-static Group* insert(TwoThreeTree tttree, Tree_Node *node);
+static Group* insert(TwoThreeTree *tttree, Tree_Node *node);
 
-char * find_value(TwoThreeTree ttthree, int key);
+char * find_value(TwoThreeTree *ttthree, int key);
 
 static Tree_Node * search(Group *root, int key);
 

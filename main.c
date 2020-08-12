@@ -1,8 +1,9 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include "two_three_tree.h"
 
 
-int main(argc, *argv[]) {
+int main(int argc, char *argv[]) {
 
 	printf("For an interactive program...");
 

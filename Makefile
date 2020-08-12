@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -g -Wall -std=c99
+CFLAGS = -g -Wall -std=c11 -fmax-errors=10
 LDFLAGS = -g
 
 all: main
