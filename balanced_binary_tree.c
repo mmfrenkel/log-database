@@ -44,23 +44,20 @@ Group* insert(TwoThreeTree tttree, Tree_Node *node) {
 	Group *root = tttree->root;
 	Group *group = find_group(tttree->root, node);
 
+	if (!group->right_node) {
+		/* CASE 1: Insert Node into Group with Only 1 Data Element */
+		/* left node is full, as nodes are added to left side of group first */
+		case_one(group, node);
+	} else if () {
+		/* CASE 2: Insert Node into Group with 2 Nodes, but whose parent Group
+		 * has only 1 Node. */
+		case_two(group, node);
+	}
+
 	if (group->left_node && group->right_node) {
 		/* This group is already full; need to sift around elements */
 		root = sift_up_to_insert(group, node);
-
 	} else if (group->left_node) {
-		/* left node only, as nodes are added to left side of group first */
-
-		if (group->left_node->key == node->key) {
-			/* TO DO: will add to a linked list */
-			continue;
-		} else if (group->left_node->key < node->key) {
-			group->right_node = node;
-		} else {
-			/* swap positions */
-			group->right_node = group->left_node;
-			group->left_node = node;
-		}
 	}
 	return root;
 }
@@ -82,36 +79,118 @@ Group* find_group(Group *root, Tree_Node *node) {
 }
 
 
-void sift_up_to_insert(Group *group, Tree_Node *node) {
+void case_one(Group *group, Tree_Node *node){
+
+	if (group->left_node->key == node->key) {
+		/* TO DO: will add to a linked list */
+		continue;
+	} else if (group->left_node->key < node->key) {
+		group->right_node = node;
+	} else {
+		/* swap positions */
+		group->right_node = group->left_node;
+		group->left_node = node;
+	}
+}
+
+void case_two(Group *group, Tree_Node *node) {
+	/* First find which node needs to sift up */
 	Tree_Node *to_sift_up;
 	Tree_Node *left_node;
 	Tree_Node *right_node;
 
 	if (node->key > group->left_node->key
 			&& node->key < group->right_node->key) {
+
+		/* then new node is middle value */
 		to_sift_up = node;
 		left_node = group->left_node;
 		right_node = group->right_node;
+
 	} else if (node->key < group->left_node->key) {
+		/* left node is middle value */
 		to_sift_up = group->left_node;
 		left_node = node;
 		right_node = group->right_node;
+
 	} else {
+		/* right node is middle value */
 		to_sift_up = group->right_node;
 		right_node = node;
 		left_node = group->left_node;
 	}
 
-	if (group->parent_group) {
-		Group *parent_group = group->parent_group;
+	Group *parent = group->parent;
 
-		if (parent_group->middle_child != 0) {
-		*/then we know it's full */
-		sift_up_to_insert(parent_group, to_sift_up);
-	} else /* there is only a left node */{
-	if (parent_group->right_child
-		}
-	} else { /* Then we're at the root node */
+	group->left_node = left_node;
+	group->right_node = 0;
+
+	Group *new_right_group = create_group();
+	new_right_group->left_node = right_node;
+	new_right_group->parent = parent;
+
+	if (parent->left_node->key < group->left_node->key) {
+		/* sifting up from right branch */
+		parent->middle_child = group;
+		parent->right_node = to_sift_up;
+		parent->right_child = new_right_group;
+	} else {
+		parent->middle_child = new_right_group;
+		parent->right_node = parent->left_node;
+		parent->left_node = to_sift_up;
+	}
+}
+
+void case_three(Group *group, Tree_Node *node) {
+	/* First find which node needs to sift up */
+	Tree_Node *to_sift_up;
+	Tree_Node *left_node;
+	Tree_Node *right_node;
+
+	if (node->key > group->left_node->key
+			&& node->key < group->right_node->key) {
+
+		/* then new node is middle value */
+		to_sift_up = node;
+		left_node = group->left_node;
+		right_node = group->right_node;
+
+	} else if (node->key < group->left_node->key) {
+		/* left node is middle value */
+		to_sift_up = group->left_node;
+		left_node = node;
+		right_node = group->right_node;
+
+	} else {
+		/* right node is middle value */
+		to_sift_up = group->right_node;
+		right_node = node;
+		left_node = group->left_node;
+	}
+
+	Group *parent = group->parent;
+
+	/* node to sift becomes parent for left and right node/groups */
+
+	/* consider root condition */
+	if (!group->parent) {
+
+		/* edit the root group as to not loose pointer to root */
+		Group *new_left_group = create_group();
+		new_left_group->parent = group;
+		new_left_group->left_node = left_node;
+		new_left_group->left_child = group->left_child;
+		new_left_group->right_child = group->middle_child;
+
+		Group *new_right_group = create_group();
+		new_right_group->parent = group;
+		new_right_group->right_node = left_node;
+		new_right_group->right_child = group->right_child;
+
+		group->left_node = to_sift_up;
+		group->right_node = 0;
+		group->left_child = new_left_group;
+		group->right_child = new_right_group;
 	}
 }
 
