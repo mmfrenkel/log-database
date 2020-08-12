@@ -1,0 +1,7 @@
+.cproject
+*.swp
+.settings/
+.project
+*.o
+a.out
+
