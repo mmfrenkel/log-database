@@ -40,7 +40,7 @@ void insert_node(TwoThreeTree tttree, char *key, char *value) {
 
 
 /*Does the work of rearranging a tree to insert a new node */
-Group* insert(TwoThreeTree tttree, Tree_Node *node) {
+static Group* insert(TwoThreeTree tttree, Tree_Node *node) {
 
 	Group *root = tttree->root;
 	Group *returned_root;
@@ -50,7 +50,7 @@ Group* insert(TwoThreeTree tttree, Tree_Node *node) {
 
 	/* Case 1: Insert Node into Group with Only 1 Data Element */
 	if (!group->right_node) {
-		case_one(group, node);
+		insert_case_one(group, node);
 	}
 	else {
 		/* Split the node, then reconstruct */
@@ -63,6 +63,48 @@ Group* insert(TwoThreeTree tttree, Tree_Node *node) {
 	} else {
 		return returned_root;
 	}
+}
+
+char * find_value(TwoThreeTree ttthree, int key) {
+
+	Tree_Node *result = search(ttthree->root, key);
+
+	if (result) {
+		return result->node_value;
+	} else {
+		return NULL;
+	}
+}
+
+/* Finds the value associated with a key in the binary tree
+ * if it exists. Returns NULL is nothing exists.
+ */
+static Tree_Node * search(Group *root, int key) {
+
+	if (!root) {
+		return NULL;
+
+	} else if (root->left_node->key == key) {
+		return root->left_node;
+
+	} else if (key < root->left_node->key) {
+		return search_tree(root->left_child, key);
+
+	} else if (root->right_node) {
+
+		if (root->right_node->key == key){
+			return root->right_node;
+		}
+		else if (key < root->right_node->key) {
+			return search_tree(root->middle_child, key);
+		}
+		else {
+			return search_tree(root->right_child, key);
+		}
+	} else {
+		return NULL;
+	}
+
 }
 
 
@@ -85,7 +127,7 @@ Group * find_group(Group *root, Tree_Node *node) {
 }
 
 
-void case_one(Group *group, Tree_Node *node){
+static void insert_case_one(Group *group, Tree_Node *node){
 
 	if (group->left_node->key == node->key) {
 		/* TO DO: will add to a linked list */
@@ -226,54 +268,6 @@ Group * split_three_node(Group *original_parent, Group *sift_group) {
 		sift_group->parent = new_parent_group;
 
 		return new_parent_group;
-	}
-}
-
-void case_two(Group *group, Tree_Node *node) {
-	/* First find which node needs to sift up */
-	Tree_Node *to_sift_up;
-	Tree_Node *left_node;
-	Tree_Node *right_node;
-
-	if (node->key > group->left_node->key
-			&& node->key < group->right_node->key) {
-
-		/* then new node is middle value */
-		to_sift_up = node;
-		left_node = group->left_node;
-		right_node = group->right_node;
-
-	} else if (node->key < group->left_node->key) {
-		/* left node is middle value */
-		to_sift_up = group->left_node;
-		left_node = node;
-		right_node = group->right_node;
-
-	} else {
-		/* right node is middle value */
-		to_sift_up = group->right_node;
-		right_node = node;
-		left_node = group->left_node;
-	}
-
-	Group *parent = group->parent;
-
-	group->left_node = left_node;
-	group->right_node = 0;
-
-	Group *new_right_group = create_group();
-	new_right_group->left_node = right_node;
-	new_right_group->parent = parent;
-
-	if (parent->left_node->key < group->left_node->key) {
-		/* sifting up from right branch */
-		parent->middle_child = group;
-		parent->right_node = to_sift_up;
-		parent->right_child = new_right_group;
-	} else {
-		parent->middle_child = new_right_group;
-		parent->right_node = parent->left_node;
-		parent->left_node = to_sift_up;
 	}
 }
 
