@@ -20,14 +20,27 @@ int main(int argc, char *argv[]) {
 		printf(" 2. Print all Key, Value Pairs\n");
 		printf(" 3. Delete Key, Value Pair Based on Key\n");
 		printf(" 4. Flush to Disk\n");
+		printf(" 5. Exit\n");
 
 		scanf("%c", &user_submission);
 
 		switch (user_submission) {
 		case '1':
+			printf("You choose 1\n");
 			insert(btree, 1, "2");
+			print_tree(btree, "in_order_traversal");
 			count_keys_in_tree++;
 			break;
+		case '2':
+			print_tree(btree, "in_order_traversal");
+			break;
+		case '3':
+			continue;
+		case '4':
+			continue;
+		case '5':
+			printf("Exiting...\n");
+			exit(1);
 		}
 	}
 
