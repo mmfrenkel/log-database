@@ -9,7 +9,7 @@ int main(int argc, char *argv[]) {
 
 	printf("Database System Started!\n");
 
-	TwoThreeTree *tthree = malloc(sizeof(TwoThreeTree));
+	Binary_Tree *btree = (Binary_Tree *) malloc(sizeof(Binary_Tree));
 	char user_submission;
 	int count_keys_in_tree = 0;
 
@@ -23,7 +23,6 @@ int main(int argc, char *argv[]) {
 
 		scanf("%c", &user_submission);
 
-		Binary_Tree btree = (Binary_Tree *) malloc(sizeof(Binary_Tree));
 		switch (user_submission) {
 		case '1':
 			insert(btree, 1, "2");
@@ -32,5 +31,5 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	free(tthree);
+	delete_tree(btree);
 }

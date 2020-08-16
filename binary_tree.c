@@ -3,7 +3,6 @@
 #include <string.h>
 #include "binary_tree.h"
 
-
 /* Insert a new node into the binary search tree */
 void insert(Binary_Tree *tree, int key, char *data) {
 
@@ -21,7 +20,7 @@ void insert(Binary_Tree *tree, int key, char *data) {
 /* Traverse tree recursively in order to place new
  * node in correct location as new leaf node.
  */
-void do_insert(BT_Node *root, BT_Node *to_insert){
+void do_insert(BT_Node *root, BT_Node *to_insert) {
 
 	// keep going until you find a leaf node
 	if (to_insert->key == root->key) {
@@ -43,12 +42,12 @@ void do_insert(BT_Node *root, BT_Node *to_insert){
 }
 
 /* Search to see if a node is in a tree */
-BT_Node * search(Binary_Tree *tree, int key) {
+BT_Node* search(Binary_Tree *tree, int key) {
 	return do_search(tree->root, key);
 }
 
 /* Recursive helper function to do actual search */
-BT_Node * do_search(BT_Node *root, int key) {
+BT_Node* do_search(BT_Node *root, int key) {
 
 	if (root->key == key) {
 		return root;
@@ -64,7 +63,6 @@ BT_Node * do_search(BT_Node *root, int key) {
 		return NULL;
 	}
 }
-
 
 /* Remove a node from tree */
 void delete(Binary_Tree *tree, int key) {
@@ -131,7 +129,7 @@ void do_delete(BT_Node *to_delete, BT_Node *parent, int is_right_child) {
 		BT_Node *trail = to_delete;
 		int r_child = 1;  // we go right first
 
-		while(to_swap->left_child != NULL) {
+		while (to_swap->left_child != NULL) {
 			trail = to_swap;
 			to_swap = to_swap->left_child;
 			r_child = 0;
@@ -154,22 +152,21 @@ void print_tree(Binary_Tree *tree, char *print_type) {
 
 	if (strcmp(print_type, "in_order_traversal") == 0) {
 		in_order_print(tree->root);
-    } else if (strcmp(print_type, "pre_order_traversal") == 0) {
-        pre_order_print(tree->root);
-    } else if (strcmp(print_type, "post_order_traversal") == 0) {
-        post_order_print(tree->root);
-    } else {
+	} else if (strcmp(print_type, "pre_order_traversal") == 0) {
+		pre_order_print(tree->root);
+	} else if (strcmp(print_type, "post_order_traversal") == 0) {
+		post_order_print(tree->root);
+	} else {
 		printf("Print type %s not recognized", print_type);
 	}
 }
-
 
 /* Preorder traversal of Tree */
 void pre_order_print(BT_Node *root) {
 
 	printf("( key: %d )\n", root->key);
-    
-    if (root->left_child != NULL) {
+
+	if (root->left_child != NULL) {
 		in_order_print(root->left_child);
 	}
 	if (root->right_child != NULL) {
@@ -192,7 +189,7 @@ void in_order_print(BT_Node *root) {
 /* Postorder traversal of Tree */
 void post_order_print(BT_Node *root) {
 
-    if (root->left_child != NULL) {
+	if (root->left_child != NULL) {
 		in_order_print(root->left_child);
 	}
 	if (root->right_child != NULL) {
@@ -202,9 +199,9 @@ void post_order_print(BT_Node *root) {
 }
 
 /* Allocates memory and creates new node struct */
-BT_Node * create_bt_node(int key, char *data) {
+BT_Node* create_bt_node(int key, char *data) {
 
-	BT_Node *node = (BT_Node *) malloc(sizeof(BT_Node));
+	BT_Node *node = (BT_Node*) malloc(sizeof(BT_Node));
 	node->key = key;
 	node->data = malloc(sizeof(char) * strlen(data));
 	node->left_child = NULL;
@@ -213,3 +210,18 @@ BT_Node * create_bt_node(int key, char *data) {
 	return node;
 }
 
+void delete_tree(Binary_Tree *tree) {
+	delete_btree_nodes(tree->root);
+	free(tree);
+}
+
+void delete_btree_nodes(BT_Node *root) {
+
+	if (root->left_child) {
+		delete_btree_nodes(root->left_child);
+	}
+	if (root->right_child) {
+		delete_btree_nodes(root->right_child);
+	}
+	free(root);
+}
