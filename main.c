@@ -1,9 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "binary_tree.h"
+#include "custom_io.h"
 
 #define MAX_LEN_KEYS 10;
-
+#define MAX_LEN_DATA 50;
 
 void die(char *msg) {
 	printf("%s", msg);
@@ -97,11 +98,16 @@ int main(int argc, char *argv[]) {
 			break;
 
 		case '4':
-			continue;
+			save_tree_to_file(btree);
+			break;
 
 		case '5':
 			printf("Exiting...\n");
 			exit(1);
+
+		default:
+			printf("Please submit a number 1-5.\n");
+			break;
 		}
 	}
 
