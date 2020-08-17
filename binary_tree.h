@@ -10,6 +10,7 @@ typedef struct binary_tree_node {
 
 typedef struct binary_tree {
 	BT_Node *root;
+	int count_keys;
 } Binary_Tree;
 
 void insert(Binary_Tree *tree, int key, char *data);
