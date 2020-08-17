@@ -1,25 +1,26 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "binary_tree.h"
 #include "custom_io.h"
 
-#define MAX_LEN_KEYS 10;
-#define MAX_LEN_DATA 50;
+#define LEN_OPTIONS 1
+#define MAX_LEN_KEYS 10
+#define MAX_LEN_DATA 50
 
 void die(char *msg) {
-	printf("%s", msg);
+	fprintf(stderr, "%s", msg);
 	exit(1);
 }
 
-char *get_user_input(int buffer_size, char* print_message) {
-	char buf[buffer_size];
+char *get_user_input(char buf[], int buf_size, char* print_message) {
 	char *p;
 
 	if (strlen(print_message) > 0) {
 		printf("%s\n", print_message);
 	}
 
-	if (fgets(buf, buffer_size, stdin) != NULL) {
+	if (fgets(buf, buf_size, stdin) != NULL) {
 
 		/* remove newline character, if necessary */
 		if ((p = strchr(buf, '\n')) != NULL)
@@ -32,14 +33,17 @@ char *get_user_input(int buffer_size, char* print_message) {
 
 /* Insert a Key Value Pair Case */
 void case_one(Binary_Tree *btree) {
-	char *key_value = get_user_input(10, "Provide a key (numeric, >0):");
+
+	char key_value[MAX_LEN_KEYS];
+	get_user_input(key_value, MAX_LEN_KEYS, "Provide a key (numeric, >0):");
 	int key = atoi(key_value);
 
 	if (key == 0) {
 		printf("Please provide a numeric-only key value >0");
 	}
 
-	char *data = get_user_input(50, "Provide some data for this key:");
+	char data[MAX_LEN_DATA];
+	get_user_input(data, MAX_LEN_DATA, "Provide some data for this key:");
 
 	insert(btree, key, data);
 	btree->count_keys++;
@@ -47,7 +51,9 @@ void case_one(Binary_Tree *btree) {
 
 /* Delete a Key-Value Pair Case */
 void case_three(Binary_Tree *btree){
-	char *key_value = get_user_input(10, "Provide a key to delete (numeric, >0):");
+
+	char key_value[MAX_LEN_KEYS];
+	get_user_input(key_value, MAX_LEN_KEYS, "Provide a key to delete (numeric, >0):");
 	int key = atoi(key_value);
 
 	if (key == 0) {
@@ -68,8 +74,8 @@ int main(int argc, char *argv[]) {
 	btree->root = NULL;
 	btree->count_keys = 0;
 
-	char user_submission;
-	int count_keys_in_tree = 0;
+	char user_submission[LEN_OPTIONS];
+	int user_selection = 0;
 
 	while(1) {
 
@@ -80,28 +86,29 @@ int main(int argc, char *argv[]) {
 		printf(" 4. Flush to Disk\n");
 		printf(" 5. Exit\n");
 
-		char *user_submission = get_user_input(1, "Select an action:");
+		get_user_input(user_submission, LEN_OPTIONS, "Select an action:");
+		user_selection = atoi(user_submission);
 
-		switch (user_submission) {
-		case '1':
+		switch (user_selection) {
+		case 1:
 			case_one(btree);
 			print_tree(btree, "in_order_traversal");
 			break;
 
-		case '2':
+		case 2:
 			print_tree(btree, "in_order_traversal");
 			break;
 
-		case '3':
+		case 3:
 			case_three(btree);
 			print_tree(btree, "in_order_traversal");
 			break;
 
-		case '4':
-			save_tree_to_file(btree);
+		case 4:
+			save_tree_to_file(btree, "binary_tree.txt");
 			break;
 
-		case '5':
+		case 5:
 			printf("Exiting...\n");
 			exit(1);
 

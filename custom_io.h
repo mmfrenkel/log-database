@@ -1,5 +1,8 @@
+#ifndef CUSTOM_IO_H
+#define CUSTOM_IO_H
+
 #include <stdio.h>
-#include <binary_tree.h>
+#include "binary_tree.h"
 
 #define MARKER -1
 #define BUF_DATA_SIZE 50
@@ -16,3 +19,4 @@ void delete_file_contents(char *filename);
 
 void add_to_file(char *filename, char *to_write);
 
+#endif
