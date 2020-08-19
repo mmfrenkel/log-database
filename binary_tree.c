@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include "binary_tree.h"
+#include "bt_utilities.h"
+
 
 /* Insert a new node into the binary search tree */
 void insert(Binary_Tree *tree, int key, char *data) {
@@ -227,10 +229,16 @@ void post_order_print(BT_Node *root) {
 BT_Node* create_bt_node(int key, char *data) {
 
 	BT_Node *node = (BT_Node*) malloc(sizeof(BT_Node));
-	node->key = key;
+	if (node == NULL) {
+       die("Failed to allocate memory for new node.\n"); 
+    }
+    
+    node->key = key;
 	node->data = malloc(sizeof(char) * strlen(data));
+    if (node->data == NULL){
+        die("Failed to allocate memory for data within node.\n");    
+    }
     strcpy(node->data, data);
-
 	node->left_child = NULL;
 	node->right_child = NULL;
 	return node;
@@ -249,5 +257,6 @@ void delete_btree_nodes(BT_Node *root) {
 	if (root->right_child) {
 		delete_btree_nodes(root->right_child);
 	}
+    free(root->data);
 	free(root);
 }
