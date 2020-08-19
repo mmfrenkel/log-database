@@ -9,7 +9,6 @@
 #define MAX_LEN_KEYS 10
 #define MAX_LEN_DATA 50
 
-
 /* Insert a Key Value Pair Case */
 void case_one(Binary_Tree *btree) {
 
@@ -29,10 +28,11 @@ void case_one(Binary_Tree *btree) {
 }
 
 /* Delete a Key-Value Pair Case */
-void case_three(Binary_Tree *btree){
+void case_three(Binary_Tree *btree) {
 
 	char key_value[MAX_LEN_KEYS];
-	get_user_input(key_value, MAX_LEN_KEYS, "Provide a key to delete (numeric, >0):");
+	get_user_input(key_value, MAX_LEN_KEYS,
+			"Provide a key to delete (numeric, >0):");
 	int key = atoi(key_value);
 
 	if (key == 0) {
@@ -41,12 +41,11 @@ void case_three(Binary_Tree *btree){
 	delete(btree, key);
 }
 
-
 int main(int argc, char *argv[]) {
 
 	printf("Database System Started!\n");
 
-	Binary_Tree *btree = (Binary_Tree *) malloc(sizeof(Binary_Tree));
+	Binary_Tree *btree = (Binary_Tree*) malloc(sizeof(Binary_Tree));
 	if (btree == NULL) {
 		die("Allocation of memory for Binary Tree failed.");
 	}
@@ -56,18 +55,18 @@ int main(int argc, char *argv[]) {
 	char user_submission[10];
 	int user_selection = 0;
 
-	while(1) {
+	while (1) {
 
-        printf("\n-----------------------------------------\n");
+		printf("\n-----------------------------------------\n");
 		printf("Available Actions are below:\n");
 		printf(" 1. Add New Key, Value Pair\n");
 		printf(" 2. Print all Key, Value Pairs\n");
 		printf(" 3. Delete Key, Value Pair Based on Key\n");
 		printf(" 4. Flush to Disk\n");
 		printf(" 5. Exit\n");
-        printf("\n-----------------------------------------\n");
+		printf("\n-----------------------------------------\n");
 
-        get_user_input(user_submission, 10, "Select an action:");
+		get_user_input(user_submission, 10, "Select an action:");
 		user_selection = atoi(user_submission);
 
 		switch (user_selection) {

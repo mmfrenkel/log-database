@@ -11,7 +11,7 @@ void save_tree_to_file(Binary_Tree *tree, char *filename);
 
 void serialize_preorder(BT_Node *root, FILE *fp);
 
-BT_Node * deserialize_preorder(FILE *fp);
+BT_Node* deserialize_preorder(FILE *fp);
 
 void kv_to_wal(char *wal, int key, char *value);
 

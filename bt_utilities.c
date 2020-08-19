@@ -6,7 +6,7 @@ void die(char *msg) {
 	exit(1);
 }
 
-char *get_user_input(char buf[], int buf_size, char* print_message) {
+char* get_user_input(char buf[], int buf_size, char *print_message) {
 	char *p;
 
 	if (strlen(print_message) > 0) {

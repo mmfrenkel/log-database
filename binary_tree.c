@@ -4,7 +4,6 @@
 #include "binary_tree.h"
 #include "bt_utilities.h"
 
-
 /* Insert a new node into the binary search tree */
 void insert(Binary_Tree *tree, int key, char *data) {
 	BT_Node *new_node = create_bt_node(key, data);
@@ -72,7 +71,7 @@ void delete(Binary_Tree *tree, int key) {
 	BT_Node *trav = tree->root;
 	int is_right_child = 0;
 
-    // first find the node to delete, if possible
+	// first find the node to delete, if possible
 	while (trav != NULL && trav->key != key) {
 		parent = trav;
 
@@ -89,33 +88,34 @@ void delete(Binary_Tree *tree, int key) {
 		// didn't find the node to delete
 		printf("Node with key %d does not exist.\n", key);
 	} else {
-		printf("Found node with key %d, value: %s. Deleting...\n", key, trav->data);
+		printf("Found node with key %d, value: %s. Deleting...\n", key,
+				trav->data);
 		BT_Node *new_root = do_delete(trav, parent, is_right_child);
-        
-        printf("Returned from deletion...\n");
-        // if a new root was assigned, give it to the binary tree
-        if (new_root != NULL) {
-            printf("A new root was assigned.\n");
-            tree->root = new_root;
-        } else if (parent == NULL) {
-            // no new root was assigned but we know the node deleted was the root
-            printf("There is no binary tree -- empty...\n");
-            tree->root = NULL;
-        }
+
+		printf("Returned from deletion...\n");
+		// if a new root was assigned, give it to the binary tree
+		if (new_root != NULL) {
+			printf("A new root was assigned.\n");
+			tree->root = new_root;
+		} else if (parent == NULL) {
+			// no new root was assigned but we know the node deleted was the root
+			printf("There is no binary tree -- empty...\n");
+			tree->root = NULL;
+		}
 	}
 }
 
-BT_Node * do_delete(BT_Node *to_delete, BT_Node *parent, int is_right_child) {
+BT_Node* do_delete(BT_Node *to_delete, BT_Node *parent, int is_right_child) {
 
-    BT_Node *new_root = NULL;
+	BT_Node *new_root = NULL;
 
 	/* Case 1: Node has no Children */
 	if (to_delete->left_child == NULL && to_delete->right_child == NULL) {
-        printf("Node has no children...\n");
-        if (parent == NULL) {
-            printf("Parent is NULL! This is a root\n");
-            // the node to delete is the root; it has no children, continue
-        } else if (is_right_child) {
+		printf("Node has no children...\n");
+		if (parent == NULL) {
+			printf("Parent is NULL! This is a root\n");
+			// the node to delete is the root; it has no children, continue
+		} else if (is_right_child) {
 			parent->right_child = NULL;
 		} else {
 			parent->left_child = NULL;
@@ -123,11 +123,11 @@ BT_Node * do_delete(BT_Node *to_delete, BT_Node *parent, int is_right_child) {
 	}
 	/* Case 2: Node has 1 LEFT Child */
 	else if (to_delete->left_child != NULL && to_delete->right_child == NULL) {
-        printf("Node has 1 left child...\n");
-        if (parent == NULL) {
-            // root condition; send left child as new root node
-            new_root = to_delete->left_child;
-        } else if (is_right_child) {
+		printf("Node has 1 left child...\n");
+		if (parent == NULL) {
+			// root condition; send left child as new root node
+			new_root = to_delete->left_child;
+		} else if (is_right_child) {
 			parent->right_child = to_delete->left_child;
 		} else {
 			parent->left_child = to_delete->left_child;
@@ -135,11 +135,11 @@ BT_Node * do_delete(BT_Node *to_delete, BT_Node *parent, int is_right_child) {
 	}
 	/* Case 3: Node has 1 RIGHT Child */
 	else if (to_delete->right_child != NULL && to_delete->left_child == NULL) {
-        printf("Node has 1 right child...\n");
-        if (parent == NULL) {
-            // root condition; send left child as new root node
-            new_root = to_delete->right_child;
-        } else if (is_right_child) {
+		printf("Node has 1 right child...\n");
+		if (parent == NULL) {
+			// root condition; send left child as new root node
+			new_root = to_delete->right_child;
+		} else if (is_right_child) {
 			parent->right_child = to_delete->right_child;
 		} else {
 			parent->left_child = to_delete->right_child;
@@ -147,12 +147,12 @@ BT_Node * do_delete(BT_Node *to_delete, BT_Node *parent, int is_right_child) {
 	}
 	/* Case 4: Node has TWO Children */
 	else {
-        printf("Node has two children...\n");
+		printf("Node has two children...\n");
 		// Best option is to replace "to_delete" node with the smallest node
 		// in the right subtree, then delete that node.
 		BT_Node *to_swap = to_delete->right_child;
 		BT_Node *trail = to_delete;
-		int is_right_child = 1;  // we go right first in our search for smallest node
+		int is_right_child = 1; // we go right first in our search for smallest node
 
 		while (to_swap->left_child != NULL) {
 			trail = to_swap;
@@ -164,19 +164,19 @@ BT_Node * do_delete(BT_Node *to_delete, BT_Node *parent, int is_right_child) {
 		to_delete->data = to_swap->data;
 
 		// this node can then be deleted with either case 1 or 2, but we don't free
-        // to_delete here, because it will happen on the next function call
+		// to_delete here, because it will happen on the next function call
 		return do_delete(to_swap, trail, is_right_child);
-    }
+	}
 	free(to_delete);
-    return new_root;
+	return new_root;
 }
 
 void print_tree(Binary_Tree *tree, char *print_type) {
 
 	if (tree->root == NULL) {
 		printf("Tree is empty\n");
-	    return;
-    }
+		return;
+	}
 
 	if (strcmp(print_type, "in_order_traversal") == 0) {
 		in_order_print(tree->root);
@@ -230,15 +230,15 @@ BT_Node* create_bt_node(int key, char *data) {
 
 	BT_Node *node = (BT_Node*) malloc(sizeof(BT_Node));
 	if (node == NULL) {
-       die("Failed to allocate memory for new node.\n"); 
-    }
-    
-    node->key = key;
+		die("Failed to allocate memory for new node.\n");
+	}
+
+	node->key = key;
 	node->data = malloc(sizeof(char) * strlen(data));
-    if (node->data == NULL){
-        die("Failed to allocate memory for data within node.\n");    
-    }
-    strcpy(node->data, data);
+	if (node->data == NULL) {
+		die("Failed to allocate memory for data within node.\n");
+	}
+	strcpy(node->data, data);
 	node->left_child = NULL;
 	node->right_child = NULL;
 	return node;
@@ -257,6 +257,6 @@ void delete_btree_nodes(BT_Node *root) {
 	if (root->right_child) {
 		delete_btree_nodes(root->right_child);
 	}
-    free(root->data);
+	free(root->data);
 	free(root);
 }
