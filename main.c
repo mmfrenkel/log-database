@@ -21,12 +21,9 @@ char *get_user_input(char buf[], int buf_size, char* print_message) {
 	}
 
 	if (fgets(buf, buf_size, stdin) != NULL) {
-
 		/* remove newline character, if necessary */
 		if ((p = strchr(buf, '\n')) != NULL)
 			*p = '\0';
-
-		return buf;
 	}
 	return NULL;
 }
@@ -74,7 +71,7 @@ int main(int argc, char *argv[]) {
 	btree->root = NULL;
 	btree->count_keys = 0;
 
-	char user_submission[LEN_OPTIONS];
+	char user_submission[10];
 	int user_selection = 0;
 
 	while(1) {
@@ -86,7 +83,7 @@ int main(int argc, char *argv[]) {
 		printf(" 4. Flush to Disk\n");
 		printf(" 5. Exit\n");
 
-		get_user_input(user_submission, LEN_OPTIONS, "Select an action:");
+        get_user_input(user_submission, 10, "Select an action:");
 		user_selection = atoi(user_submission);
 
 		switch (user_selection) {
@@ -113,7 +110,7 @@ int main(int argc, char *argv[]) {
 			exit(1);
 
 		default:
-			printf("Please submit a number 1-5.\n");
+			printf("Please submit a number 1-5 (no spare characters).\n");
 			break;
 		}
 	}

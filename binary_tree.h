@@ -19,7 +19,7 @@ void do_insert(BT_Node *root, BT_Node *to_insert);
 
 void delete(Binary_Tree *tree, int key);
 
-void do_delete(BT_Node *to_delete, BT_Node *parent, int is_right_child);
+BT_Node * do_delete(BT_Node *to_delete, BT_Node *parent, int is_right_child);
 
 BT_Node * create_bt_node(int key, char *data);
 
