@@ -244,13 +244,19 @@ BT_Node* create_bt_node(int key, char *data) {
 	return node;
 }
 
+/* Keeps tree, but removes all nodes */
+void clear_tree(Binary_Tree *tree) {
+	delete_btree_nodes(btree->root);
+	btree->root = NULL;
+}
+
+/* Deletes entire tree from memory */
 void delete_tree(Binary_Tree *tree) {
 	delete_btree_nodes(tree->root);
 	free(tree);
 }
 
-void delete_btree_nodes(BT_Node *root) {
-
+static void delete_btree_nodes(BT_Node *root) {
 	if (root->left_child) {
 		delete_btree_nodes(root->left_child);
 	}

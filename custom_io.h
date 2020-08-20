@@ -7,16 +7,15 @@
 #define MARKER -1
 #define BUF_DATA_SIZE 50
 
-void save_tree_to_file(Binary_Tree *tree, char *filename);
-
-void serialize_preorder(BT_Node *root, FILE *fp);
+void serialize_tree(Binary_Tree *tree, char *filename);
 
 BT_Node* deserialize_preorder(FILE *fp);
 
 void kv_to_wal(char *wal, int key, char *value);
 
+void tree_to_log_file(Binary_Tree *tree, char *filename);
+
 void delete_file_contents(char *filename);
 
-void add_to_file(char *filename, char *to_write);
-
 #endif
+

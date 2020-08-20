@@ -35,8 +35,8 @@ void in_order_print(BT_Node *root);
 
 void print_tree(Binary_Tree *tree, char *print_type);
 
-void delete_tree(Binary_Tree *tree);
+void clear_tree(Binary_Tree *tree);
 
-void delete_btree_nodes(BT_Node *root);
+void delete_tree(Binary_Tree *tree);
 
 #endif
