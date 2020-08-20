@@ -48,14 +48,38 @@ BT_Node* deserialize_preorder(FILE *fp) {
 	return root;
 }
 
-/* Compact files -- use a merge sort approach merge log files together */
-void compaction(char *filename1, char *filename2) {
-	// TO DO
+/* Used to perform compaction step of many segment files. This method is
+ * necessary for cleaning up old segment files and keeping read I/O from
+ * getting out of control. Merges old segments together into new segments.*/
+char** compaction(int num_segments, char **segment_files) {
+	// open segment files
+	FILE *file_pointers[num_segments];
+	int current_keys[num_segments];
+	char *current_data[num_segments];
+
+	/* Create new segment list, including new segment to hold compacted data */
+	char *new_segment_files[num_segments];
+	char new_segment[20];
+	sprintf(new_segment, "log_%d.txt", time(NULL));
+	new_segment_files[0] = new_segment;
+	FILE *new_fp = fopen(new_segment, "w");
+
+	for (int i = 0; i <num_segments, i++) {
+		file_pointers[i] = fopen(segment_files[i], "r");
+	}
+	
+	// close all the file pointers when done
+	fclose(new_fp);
+	for (int i = 0; i < num_segments; i++){
+		fclose(file_pointers[i]);
+	}
+	return new_segment_files;
 }
 
 
-/* Writes a Tree to Log File (no Binary Tree structure maintained) */
-void tree_to_log_file(Binary_Tree *tree, char *filename) {
+/* Writes a Tree to a Sorted Strings Table 
+ * (key-value pairs in which keys are in sorted order*/
+void tree_to_sorted_strings_table(Binary_Tree *tree, char *filename) {
 	FILE *fp;
 	fp = fopen(filename, "w");
 	inorder_write(tree->root, fp);

@@ -11,9 +11,11 @@ void serialize_tree(Binary_Tree *tree, char *filename);
 
 BT_Node* deserialize_preorder(FILE *fp);
 
+char** compaction(filename1, filename2);
+
 void kv_to_wal(char *wal, int key, char *value);
 
-void tree_to_log_file(Binary_Tree *tree, char *filename);
+void tree_to_sorted_strings_table(Binary_Tree *tree, char *filename);
 
 void delete_file_contents(char *filename);
 
