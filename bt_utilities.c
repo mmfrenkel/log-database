@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 void die(char *msg) {
 	fprintf(stderr, "%s", msg);

@@ -11,6 +11,7 @@
 #define MAX_LEN_DATA 50
 #define MAX_KEYS_IN_TREE 10
 #define MAX_SEGMENTS 2
+#define FILENAME_SIZE 20
 
 
 /* Print out user options */
@@ -57,13 +58,25 @@ void case_three(Binary_Tree *memtable) {
 	delete(memtable, key);
 }
 
+char ** init_segments() {
+	char **segments = (char **) malloc(MAX_SEGMENTS * sizeof(char *));
+	for (int i = 0; i < MAX_SEGMENTS; i++)
+		*(segments + i) = NULL;
+	return segments;
+}
+
+void free_segments(char **segments) {
+	for (int i = 0; i < MAX_SEGMENTS; i++)
+		free(*(segments + i));
+	free(segments);
+}
 
 int main(int argc, char *argv[]) {
 
 	printf("Database System Started!\n");
 	int keys_in_memory = 0;
 	int full_segments = 0;
-	char *segments[MAX_SEGMENTS];
+	char **segments = init_segments();
    	
 	/* This memtable (in this case, a binary tree) will hold 
 	 * user data in memory until flush to log */
@@ -97,7 +110,7 @@ int main(int argc, char *argv[]) {
 			keys_in_memory -= 1;
 			break;
 		case 4:
-			save_tree_to_file(memtable, "binary_tree.txt");
+			serialize_tree(memtable, "binary_tree.txt");
 			break;
 		case 5:
 			printf("Exiting...\n");
@@ -111,22 +124,25 @@ int main(int argc, char *argv[]) {
 		if (keys_in_memory == MAX_KEYS_IN_TREE) {
 			if (full_segments == MAX_SEGMENTS) {
 				// run compaction of existing files	to produce single one 
-				segments[0] = compact(MAX_SEGMENTS, segments);
-				for (int i = 1; i < MAX_SEGMENTS; i++) 
-					segments[i] = NULL;
+				*(segments) = compact(MAX_SEGMENTS, segments);
+				for (int i = 1; i < MAX_SEGMENTS; i++) {
+					free(*(segments + i));
+					*(segments + i) = NULL;
+				}
 				full_segments = 1;
 			}
-			char filename[20];
-			sprintf(filename,"%s_%d.txt", "log", time(NULL));
+			char *filename = (char *) malloc(sizeof(char) * FILENAME_SIZE);
+			sprintf(filename,"%s_%ld.txt", "log", time(NULL));
 			tree_to_sorted_strings_table(memtable, filename);
-			segments[full_segments] = filename;
-			full_segments += 1;
-		
+
+			*(segments + full_segments) = filename;
+			full_segments += 1;	
 			clear_tree(memtable);
 			keys_in_memory = 0;
 		}
 	}
 	// I'm finished!
 	delete_tree(memtable);
+	free_segments(segments);
 }
 

@@ -4,6 +4,8 @@
 #include "binary_tree.h"
 #include "bt_utilities.h"
 
+static void delete_btree_nodes(BT_Node *root);
+
 /* Insert a new node into the binary search tree */
 void insert(Binary_Tree *tree, int key, char *data) {
 	BT_Node *new_node = create_bt_node(key, data);
@@ -246,8 +248,8 @@ BT_Node* create_bt_node(int key, char *data) {
 
 /* Keeps tree, but removes all nodes */
 void clear_tree(Binary_Tree *tree) {
-	delete_btree_nodes(btree->root);
-	btree->root = NULL;
+	delete_btree_nodes(tree->root);
+	tree->root = NULL;
 }
 
 /* Deletes entire tree from memory */
