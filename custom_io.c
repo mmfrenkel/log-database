@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "binary_tree.h"
 #include "custom_io.h"
+#include "bt_utilties.h"
 
 #define MARKER -1
 #define MAX_LINE_SIZE 100
@@ -10,6 +11,8 @@
 static void serialize_preorder(BT_Node *root, FILE *fp);
 static void add_to_file(char *filename, char *to_write);
 static void inorder_to_file(BT_Node *root, FILE *fp);
+static char* do_compaction(char *segment_file1, char *segment_file2);
+static void delete_file(char *filename);
 
 /* Writes a binary tree to file
 void serialize_tree(Binary_Tree *tree, char *filename) {
@@ -48,32 +51,89 @@ BT_Node* deserialize_preorder(FILE *fp) {
 	return root;
 }
 
-/* Used to perform compaction step of many segment files. This method is
- * necessary for cleaning up old segment files and keeping read I/O from
- * getting out of control. Merges old segments together into new segments.*/
-char** compaction(int num_segments, char **segment_files) {
-	// open segment files
-	FILE *file_pointers[num_segments];
-	int current_keys[num_segments];
-	char *current_data[num_segments];
-
-	/* Create new segment list, including new segment to hold compacted data */
-	char *new_segment_files[num_segments];
-	char new_segment[20];
-	sprintf(new_segment, "log_%d.txt", time(NULL));
-	new_segment_files[0] = new_segment;
-	FILE *new_fp = fopen(new_segment, "w");
-
-	for (int i = 0; i <num_segments, i++) {
-		file_pointers[i] = fopen(segment_files[i], "r");
+char *compact(int num_segment_files, char **segment_files) {
+	if (segment_files == NULL) {
+		die("Segment files for compaction not provided\n");
+	}
+	int_num_segfiles = sizeof(segment_files) / sizeof(segment_files[0]);
+	if (num_segfiles < 2) {
+		die("Need at least two segment files for compaction.\n");
 	}
 	
-	// close all the file pointers when done
-	fclose(new_fp);
-	for (int i = 0; i < num_segments; i++){
-		fclose(file_pointers[i]);
+	char *segment_file1 = segment_files[0];
+	char *new_segment, *segment_file2;
+	for (int i = 1; i < num_segment_files; i++) {
+		segment_file2 = segment_files[i];
+		new_segment = do_compaction(segment_file1, segment_file2);	
+		delete_file(segment_file1);
+		delete_file(segment_file2);
+		segment_file_1 = new_segment;
+	}	
+	return new_segment;
+}
+
+/* Used to perform compaction step of two segment files. This method is
+ * necessary for cleaning up old segment files and keeping read I/O from
+ * getting out of control. Merges old segments together into new segments.*/
+static char* do_compaction(char *segment_file1, char *segment_file2) {
+	// open files for segments of interest
+	FILE *segment_ptr1 = fopen(segment_file1, "r");
+	FILE *segment_ptr2 = fopen(segment_file2, "r");
+
+	// create a new segment file
+	char new_segment[20];
+	sprintf(new_segment, "log_%d.txt", time(NULL));
+	FILE *new_fp = fopen(new_segment, "w");
+
+	// setup for merge loop
+	char line_seg1[MAX_LINE_SIZE];
+	char line_seg2[MAX_LINE_SIZE];
+	int keep_merging = 1;
+	int incr_ptr1 = 1;
+	int incr_ptr2 = 1;
+
+	while (keep_merging) {
+		if (incr_ptr1) fget(line_seg1, MAX_LINE_SIZE, segment_ptr1);
+		if (incr_ptr2) fget(line_seg2, MAX_LINE_SIZE, segment_ptr2);
+
+		if (line_seg1 == NULL && line_seg2 == NULL) {
+			keep_merging = 0;
+		}
+		else if (line_seg1 == NULL || line_seg2 == NULL) {
+			// add any remaining keys to new file
+			FILE *temp_ptr = segment_ptr1 ? segment_ptr1 != NULL : segment_ptr2;
+			char temp_line[MAX_LINE_SIZE] = line_seg1 ? segment_ptr1 != NULL : line_seg2;
+			do {
+				fputs(temp_line, new_fp);
+			} while(fgets(temp_line, MAX_LINE_SIZE, temp_ptr) != NULL);
+			keep_merging = 0;
+		} else {
+			/* merge these two; figure out which should go into the file 
+			 * note that segmentfile2 should be "younger" or "newer" than 
+			 * segment file 1 so we use that preferably */
+			int key_1 = atoi(strtok(line_seg1, ","));
+			int key_2 = atoi(strtok(line_seg2, ","));
+			if (key_1 == key_2) {
+				fputs(line_seg2, new_fp);
+				incr_ptr1 = 1;
+				incr_ptr2 = 1;
+			} else if (key_1 > key_2) {
+				fputs(line_seg2, new_fp);
+				incr_ptr1 = 0;
+				incr_ptr2 = 1;
+			} else {  // key_2 > key_1
+				fputs(line_seg1, new_fp);
+				incr_ptr1 = 1;
+				incr_ptr2 = 0;
+			}
+		}	
 	}
-	return new_segment_files;
+	// close fp for new file
+	fclose(new_fp);
+	fclose(segment_ptr1);
+	fclose(segment_ptr2);
+	fclose(segment_file2);
+	return new_segment;
 }
 
 
@@ -120,5 +180,12 @@ void delete_file_contents(char *filename) {
 	FILE *fp;
 	fp = fopen(filename, "w");
 	fclose(fp);
+}
+
+/* Permanently deletes entire file */
+static void delete_file(char *filename) {
+	int del = remove(filename);
+	if (del) 
+		die("Compacted segment file did not delete properly");
 }
 

@@ -11,7 +11,7 @@ void serialize_tree(Binary_Tree *tree, char *filename);
 
 BT_Node* deserialize_preorder(FILE *fp);
 
-char** compaction(filename1, filename2);
+char* compaction(int num_segment_files, char **segment_files);
 
 void kv_to_wal(char *wal, int key, char *value);
 

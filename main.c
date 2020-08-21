@@ -114,9 +114,9 @@ int main(int argc, char *argv[]) {
 				char filename[20];
 				sprintf(filename,"%s_%d.txt", "log", time(NULL));
 				tree_to_sorted_strings_table(memtable, filename);
-				segements[full_log_files - 1] = filename;
+				segments[full_segments - 1] = filename;
 				clear_tree(memtable);
-				full_segements += 1;
+				full_segments += 1;
 				keys_in_memory = 0;
 			}
 		}
