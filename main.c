@@ -12,6 +12,7 @@
 #define MAX_KEYS_IN_TREE 10
 #define MAX_SEGMENTS 2
 
+
 /* Print out user options */
 void print_user_options() {
 	printf("\n-----------------------------------------\n");
@@ -42,6 +43,7 @@ void case_one(Binary_Tree *memtable) {
 	insert(memtable, key, data);
 	memtable->count_keys++;
 }
+
 
 /* Delete a Key-Value Pair Case */
 void case_three(Binary_Tree *memtable) {
@@ -105,22 +107,26 @@ int main(int argc, char *argv[]) {
 			break;
 		}
 
-		// write binary tree to log file 
+		// Compact existing files, if necessary
 		if (keys_in_memory == MAX_KEYS_IN_TREE) {
 			if (full_segments == MAX_SEGMENTS) {
-				// run compaction of existing files	
+				// run compaction of existing files	to produce single one 
+				segments[0] = compact(MAX_SEGMENTS, segments);
+				for (int i = 1; i < MAX_SEGMENTS; i++) 
+					segments[i] = NULL;
+				full_segments = 1;
 			}
-			else { // just create new log file
-				char filename[20];
-				sprintf(filename,"%s_%d.txt", "log", time(NULL));
-				tree_to_sorted_strings_table(memtable, filename);
-				segments[full_segments - 1] = filename;
-				clear_tree(memtable);
-				full_segments += 1;
-				keys_in_memory = 0;
-			}
+			char filename[20];
+			sprintf(filename,"%s_%d.txt", "log", time(NULL));
+			tree_to_sorted_strings_table(memtable, filename);
+			segments[full_segments] = filename;
+			full_segments += 1;
+		
+			clear_tree(memtable);
+			keys_in_memory = 0;
 		}
 	}
+	// I'm finished!
 	delete_tree(memtable);
 }
 
