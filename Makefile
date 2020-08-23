@@ -2,9 +2,9 @@ CC = gcc
 CFLAGS = -g -Wall -std=c11 -fmax-errors=10
 LDFLAGS = -g
 
-all: main
+all: clean main
 
-main: two_three_tree.o binary_tree.o custom_io.o bt_utilities.o
+main: two_three_tree.o binary_tree.o custom_io.o user_io.o
 
 binary_tree.o: binary_tree.h
 
@@ -12,7 +12,7 @@ two_three_tree.o: two_three_tree.h
 
 custom_io.o: custom_io.h
 
-bt_utilities.o: bt_utilities.h
+user_io.o: user_io.h
 
 .PHONY: clean
 clean:

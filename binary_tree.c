@@ -2,13 +2,26 @@
 #include <stdlib.h>
 #include <string.h>
 #include "binary_tree.h"
-#include "bt_utilities.h"
+#include "error.h"
 
+/* Prototypes for static functions for library */
 static void delete_btree_nodes(BT_Node *root);
+static void do_insert(BT_Node *root, BT_Node *to_insert);
+static BT_Node* do_search(BT_Node *root, int key);
+static BT_Node* do_delete(BT_Node *to_delete, BT_Node *parent, int is_right_child);
+static BT_Node* create_bt_node(int key, char *data);
+static void pre_order_print(BT_Node *root);
+static void post_order_print(BT_Node *root);
+static void in_order_print(BT_Node *root);
 
-/* Insert a new node into the binary search tree */
-void insert(Binary_Tree *tree, int key, char *data) {
+
+/* Insert a new node into the binary search tree.
+ * Returns -1 if an error occurred, returns 0 if success.*/
+int insert(Binary_Tree *tree, int key, char *data) {
 	BT_Node *new_node = create_bt_node(key, data);
+	if (new_node == NULL) {
+		return -1;  // failed to allocate memory for new node
+	}
 
 	if (!tree->root) {
 		// need to make root for tree
@@ -16,13 +29,12 @@ void insert(Binary_Tree *tree, int key, char *data) {
 	} else {
 		do_insert(tree->root, new_node);
 	}
-
+	return 0;
 }
 
 /* Traverse tree recursively in order to place new
- * node in correct location as new leaf node.
- */
-void do_insert(BT_Node *root, BT_Node *to_insert) {
+ * node in correct location as new leaf node. */
+static void do_insert(BT_Node *root, BT_Node *to_insert) {
 
 	// keep going until you find a leaf node
 	if (to_insert->key == root->key) {
@@ -49,7 +61,7 @@ BT_Node* search(Binary_Tree *tree, int key) {
 }
 
 /* Recursive helper function to do actual search */
-BT_Node* do_search(BT_Node *root, int key) {
+static BT_Node* do_search(BT_Node *root, int key) {
 
 	if (root->key == key) {
 		return root;
@@ -66,8 +78,9 @@ BT_Node* do_search(BT_Node *root, int key) {
 	}
 }
 
-/* Remove a node from tree */
-void delete(Binary_Tree *tree, int key) {
+/* Remove a node from tree. Returns 0 if success,
+ * -1 if failure. */
+int delete(Binary_Tree *tree, int key) {
 
 	BT_Node *parent = NULL;
 	BT_Node *trav = tree->root;
@@ -76,7 +89,6 @@ void delete(Binary_Tree *tree, int key) {
 	// first find the node to delete, if possible
 	while (trav != NULL && trav->key != key) {
 		parent = trav;
-
 		if (trav->key > key) {
 			trav = trav->left_child;
 			is_right_child = 0;
@@ -89,12 +101,12 @@ void delete(Binary_Tree *tree, int key) {
 	if (trav == NULL) {
 		// didn't find the node to delete
 		printf("Node with key %d does not exist.\n", key);
+		return -1;
 	} else {
 		printf("Found node with key %d, value: %s. Deleting...\n", key,
 				trav->data);
 		BT_Node *new_root = do_delete(trav, parent, is_right_child);
 
-		printf("Returned from deletion...\n");
 		// if a new root was assigned, give it to the binary tree
 		if (new_root != NULL) {
 			printf("A new root was assigned.\n");
@@ -105,9 +117,10 @@ void delete(Binary_Tree *tree, int key) {
 			tree->root = NULL;
 		}
 	}
+	return 0;
 }
 
-BT_Node* do_delete(BT_Node *to_delete, BT_Node *parent, int is_right_child) {
+static BT_Node* do_delete(BT_Node *to_delete, BT_Node *parent, int is_right_child) {
 
 	BT_Node *new_root = NULL;
 
@@ -192,7 +205,7 @@ void print_tree(Binary_Tree *tree, char *print_type) {
 }
 
 /* Preorder traversal of Tree */
-void pre_order_print(BT_Node *root) {
+static void pre_order_print(BT_Node *root) {
 	printf("( key: %d , value: %s)\n", root->key, root->data);
 
 	if (root->left_child != NULL) {
@@ -204,7 +217,7 @@ void pre_order_print(BT_Node *root) {
 }
 
 /* In order traversal of Tree */
-void in_order_print(BT_Node *root) {
+static void in_order_print(BT_Node *root) {
 	if (root->left_child != NULL) {
 		in_order_print(root->left_child);
 	}
@@ -216,7 +229,7 @@ void in_order_print(BT_Node *root) {
 }
 
 /* Postorder traversal of Tree */
-void post_order_print(BT_Node *root) {
+static void post_order_print(BT_Node *root) {
 
 	if (root->left_child != NULL) {
 		in_order_print(root->left_child);
@@ -228,11 +241,12 @@ void post_order_print(BT_Node *root) {
 }
 
 /* Allocates memory and creates new node struct */
-BT_Node* create_bt_node(int key, char *data) {
+static BT_Node* create_bt_node(int key, char *data) {
 
 	BT_Node *node = (BT_Node*) malloc(sizeof(BT_Node));
 	if (node == NULL) {
-		die("Failed to allocate memory for new node.\n");
+		printf("Failed to allocate memory for new node.\n");
+		return NULL;
 	}
 
 	node->key = key;
@@ -268,3 +282,4 @@ static void delete_btree_nodes(BT_Node *root) {
 	free(root->data);
 	free(root);
 }
+

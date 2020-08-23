@@ -1,0 +1,3 @@
+
+void die(char *msg);
+

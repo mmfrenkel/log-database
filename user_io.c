@@ -2,11 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-void die(char *msg) {
-	fprintf(stderr, "%s", msg);
-	exit(1);
-}
-
 char* get_user_input(char buf[], int buf_size, char *print_message) {
 	char *p;
 

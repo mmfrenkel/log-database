@@ -4,7 +4,8 @@
 #include <time.h>
 #include "binary_tree.h"
 #include "custom_io.h"
-#include "bt_utilities.h"
+#include "error.h"
+#include "user_io.h"
 
 #define LEN_OPTIONS 1
 #define MAX_LEN_KEYS 10
@@ -41,8 +42,11 @@ void case_one(Binary_Tree *memtable) {
 	char data[MAX_LEN_DATA];
 	get_user_input(data, MAX_LEN_DATA, "Provide some data for this key:");
 
-	insert(memtable, key, data);
-	memtable->count_keys++;
+	if (insert(memtable, key, data) == 0) {
+		memtable->count_keys++;
+	} else {
+		printf("Insertion of new node failed.\n");
+	}
 }
 
 
@@ -50,12 +54,19 @@ void case_one(Binary_Tree *memtable) {
 void case_three(Binary_Tree *memtable) {
 
 	char key_value[MAX_LEN_KEYS];
-	get_user_input(key_value, MAX_LEN_KEYS,
-			"Provide a key to delete (numeric, >0):"); int key = atoi(key_value); 
+	get_user_input(key_value, MAX_LEN_KEYS, 
+			"Provide a key to delete (numeric, >0):"); 
+	
+	int key = atoi(key_value); 
 	if (key == 0) {
 		printf("Please provide a numeric-only key value >0");
 	}
-	delete(memtable, key);
+	
+	if (delete(memtable, key) == 0) {
+		memtable->count_keys--;
+	} else {
+		printf("Deletion of key, value pair with key %d failed.\n", key);
+	}
 }
 
 char ** init_segments() {

@@ -4,7 +4,7 @@
 #include <string.h>
 #include "binary_tree.h"
 #include "custom_io.h"
-#include "bt_utilities.h"
+#include "error.h"
 
 #define MARKER -1
 #define MAX_LINE_SIZE 100
