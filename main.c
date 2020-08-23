@@ -20,9 +20,10 @@ void print_user_options() {
 	printf("Available Actions are below:\n");
 	printf(" 1. Add New Key, Value Pair\n");
 	printf(" 2. Print all Key, Value Pairs\n");
-	printf(" 3. Delete Key, Value Pair Based on Key\n");
-	printf(" 4. Flush to Disk\n");
-	printf(" 5. Exit\n");
+	printf(" 3. Find Value for Key");
+	printf(" 4. Delete Key, Value Pair Based on Key\n");
+	printf(" 5. Flush to Disk\n");
+	printf(" 6. Exit\n");
 	printf("\n-----------------------------------------\n");
 }
 
@@ -47,8 +48,21 @@ void case_one(Binary_Tree *memtable) {
 	}
 }
 
-/* Delete a Key-Value Pair Case */
+/* Search for a Value based on a given key */
 void case_three(Binary_Tree *memtable) {
+	char key_value[MAX_LEN_KEYS];
+	get_user_input(key_value, MAX_LEN_KEYS, "Provide a key (numeric, >0):");
+	int key = atoi(key_value);
+
+	if (key <= 0) {
+		printf("Please provide a numeric-only key value >0");
+	}
+	BT_Node *node = search(memtable, key);
+	printf("Value for key %d is %s", key, node->data);
+}
+
+/* Delete a Key-Value Pair Case */
+void case_four(Binary_Tree *memtable) {
 
 	char key_value[MAX_LEN_KEYS];
 	get_user_input(key_value, MAX_LEN_KEYS,
@@ -114,13 +128,16 @@ int main(int argc, char *argv[]) {
 			break;
 		case 3:
 			case_three(memtable);
+			break;
+		case 4:
+			case_four(memtable);
 			print_tree(memtable, "in_order_traversal");
 			keys_in_memory -= 1;
 			break;
-		case 4:
+		case 5:
 			serialize_tree(memtable, "binary_tree.txt");
 			break;
-		case 5:
+		case 6:
 			printf("Exiting...\n");
 			exit(1);
 		default:
