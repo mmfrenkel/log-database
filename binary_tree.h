@@ -17,6 +17,8 @@ int insert(Binary_Tree *tree, int key, char *data);
 
 int delete(Binary_Tree *tree, int key);
 
+BT_Node* create_bt_node(int key, char *data);
+
 BT_Node* search(Binary_Tree *tree, int key);
 
 void print_tree(Binary_Tree *tree, char *print_type);

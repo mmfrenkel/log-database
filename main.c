@@ -14,7 +14,6 @@
 #define MAX_SEGMENTS 2
 #define FILENAME_SIZE 20
 
-
 /* Print out user options */
 void print_user_options() {
 	printf("\n-----------------------------------------\n");
@@ -26,7 +25,6 @@ void print_user_options() {
 	printf(" 5. Exit\n");
 	printf("\n-----------------------------------------\n");
 }
-
 
 /* Insert a Key Value Pair Case */
 void case_one(Binary_Tree *memtable) {
@@ -49,19 +47,18 @@ void case_one(Binary_Tree *memtable) {
 	}
 }
 
-
 /* Delete a Key-Value Pair Case */
 void case_three(Binary_Tree *memtable) {
 
 	char key_value[MAX_LEN_KEYS];
-	get_user_input(key_value, MAX_LEN_KEYS, 
-			"Provide a key to delete (numeric, >0):"); 
-	
-	int key = atoi(key_value); 
+	get_user_input(key_value, MAX_LEN_KEYS,
+			"Provide a key to delete (numeric, >0):");
+
+	int key = atoi(key_value);
 	if (key == 0) {
 		printf("Please provide a numeric-only key value >0");
 	}
-	
+
 	if (delete(memtable, key) == 0) {
 		memtable->count_keys--;
 	} else {
@@ -69,8 +66,8 @@ void case_three(Binary_Tree *memtable) {
 	}
 }
 
-char ** init_segments() {
-	char **segments = (char **) malloc(MAX_SEGMENTS * sizeof(char *));
+char** init_segments() {
+	char **segments = (char**) malloc(MAX_SEGMENTS * sizeof(char*));
 	for (int i = 0; i < MAX_SEGMENTS; i++)
 		*(segments + i) = NULL;
 	return segments;
@@ -88,7 +85,7 @@ int main(int argc, char *argv[]) {
 	int keys_in_memory = 0;
 	int full_segments = 0;
 	char **segments = init_segments();
-   	
+
 	/* This memtable (in this case, a binary tree) will hold 
 	 * user data in memory until flush to log */
 	Binary_Tree *memtable = (Binary_Tree*) malloc(sizeof(Binary_Tree));
@@ -142,12 +139,12 @@ int main(int argc, char *argv[]) {
 				}
 				full_segments = 1;
 			}
-			char *filename = (char *) malloc(sizeof(char) * FILENAME_SIZE);
-			sprintf(filename,"%s_%ld.txt", "log", time(NULL));
+			char *filename = (char*) malloc(sizeof(char) * FILENAME_SIZE);
+			sprintf(filename, "%s_%ld.txt", "log", time(NULL));
 			tree_to_sorted_strings_table(memtable, filename);
 
 			*(segments + full_segments) = filename;
-			full_segments += 1;	
+			full_segments += 1;
 			clear_tree(memtable);
 			keys_in_memory = 0;
 		}

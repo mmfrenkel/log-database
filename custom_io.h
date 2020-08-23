@@ -20,4 +20,3 @@ void tree_to_sorted_strings_table(Binary_Tree *tree, char *filename);
 void delete_file_contents(char *filename);
 
 #endif
-

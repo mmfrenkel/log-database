@@ -8,12 +8,11 @@
 static void delete_btree_nodes(BT_Node *root);
 static void do_insert(BT_Node *root, BT_Node *to_insert);
 static BT_Node* do_search(BT_Node *root, int key);
-static BT_Node* do_delete(BT_Node *to_delete, BT_Node *parent, int is_right_child);
-static BT_Node* create_bt_node(int key, char *data);
+static BT_Node* do_delete(BT_Node *to_delete, BT_Node *parent,
+		int is_right_child);
 static void pre_order_print(BT_Node *root);
 static void post_order_print(BT_Node *root);
 static void in_order_print(BT_Node *root);
-
 
 /* Insert a new node into the binary search tree.
  * Returns -1 if an error occurred, returns 0 if success.*/
@@ -120,7 +119,8 @@ int delete(Binary_Tree *tree, int key) {
 	return 0;
 }
 
-static BT_Node* do_delete(BT_Node *to_delete, BT_Node *parent, int is_right_child) {
+static BT_Node* do_delete(BT_Node *to_delete, BT_Node *parent,
+		int is_right_child) {
 
 	BT_Node *new_root = NULL;
 
@@ -241,7 +241,7 @@ static void post_order_print(BT_Node *root) {
 }
 
 /* Allocates memory and creates new node struct */
-static BT_Node* create_bt_node(int key, char *data) {
+BT_Node* create_bt_node(int key, char *data) {
 
 	BT_Node *node = (BT_Node*) malloc(sizeof(BT_Node));
 	if (node == NULL) {
