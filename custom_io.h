@@ -17,6 +17,6 @@ char* tree_to_sorted_strings_table(Binary_Tree *tree);
 
 void delete_file_contents(char *filename);
 
-void delete_file(char *filename);
+int delete_file(char *filename);
 
 #endif

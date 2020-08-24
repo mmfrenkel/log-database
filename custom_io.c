@@ -109,9 +109,12 @@ void delete_file_contents(char *filename) {
 }
 
 /* Permanently deletes entire file */
-void delete_file(char *filename) {
+int delete_file(char *filename) {
 	int del = remove(filename);
-	if (del)
-		die("Compacted segment file did not delete properly");
+	if (del) {
+		printf("Compacted segment file did not delete properly");
+		return -1;
+	}
+	return 0;
 }
 

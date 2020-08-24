@@ -9,6 +9,8 @@
 // prototypes for static functions here
 static char* compact(int num_segment_files, char **segment_files);
 static char* merge_files(char *segment_file1, char *segment_file2);
+static char* search_segments(char **segment_files, int full_segments, int key);
+static char* search_segment_file(FILE *segment_ptr, int key);
 
 /* Creates an LSM Tree for the program to use, initializing
  * everything properly */
@@ -38,7 +40,8 @@ LSM_Tree* init_lsm_tree() {
 	return lsm_tree;
 }
 
-/* Handles the submission provided by user */
+/* Handles the submission provided by user; returns 0 if all succeeds,
+ * otherwise returns -1.  */
 int handle_submission(LSM_Tree *lsm_tree, Submission *submission) {
 
 	if (submission->action == ADD) {
@@ -51,8 +54,21 @@ int handle_submission(LSM_Tree *lsm_tree, Submission *submission) {
 		}
 
 	} else if (submission->action == SEARCH) {
+		// search memtable first
 		BT_Node *node = search(lsm_tree->memtable, submission->key);
-		printf("Value for key %d is %s", node->key, node->data);
+		char *value;
+		if (node == NULL) {
+			// value wasn't in memtable, so look through the log files
+			value = search_segments(lsm_tree->segments, lsm_tree->full_segments, submission->key);
+		} else {
+			value = node->data;
+		}
+
+		if (value != NULL) {
+			printf("Value for key %d is %s", submission->key, value);
+		} else {
+			printf("Key not found in LSM Tree system.\n");
+		}
 
 	} else if (submission->action == DELETE) {
 		if (delete(lsm_tree->memtable, submission->key) == 0) {
@@ -68,12 +84,53 @@ int handle_submission(LSM_Tree *lsm_tree, Submission *submission) {
 
 	} else if (submission->action == PRINT_MEMTABLE) {
 		print_tree(lsm_tree->memtable, "in_order_traversal");
+
 	} else {
 		printf("Could not process request in submission.\n");
 		return -1;
 	}
 
-	return run_compaction(lsm_tree); // this should be in the background -- TO DO
+	// this should be in the background, rather than sequential in future
+	return run_compaction(lsm_tree);
+}
+
+/* Searches existing segment files to see if the key exists.
+ * Starts search with most recent segment (newest) */
+static char* search_segments(char **segment_files, int full_segments, int key) {
+	if (full_segments == 0) {
+		return NULL;
+	}
+
+	for (int i = full_segments; i >= 0; i--) {
+
+		FILE *segment_ptr = fopen(*(segment_files + i), "r");
+		char *value = search_segment_file(segment_ptr, key);
+
+		fclose(segment_ptr);
+		if (value != NULL) {
+			return value;
+		}
+	}
+	return NULL;
+}
+
+/* Searches through a segment, if key in segment then return value;
+ * uses recursion to look at last line of file first (note that files
+ * are assumed to be small and can fit in stack memory. */
+static char* search_segment_file(FILE *segment_ptr, int key) {
+	char line[MAX_LINE_SIZE];
+
+	if (fgets(line, MAX_LINE_SIZE, segment_ptr) != NULL) {
+		char *value = search_segment_file(segment_ptr, key);
+		if (value != NULL) {
+			return value;
+		}
+
+		if (atoi(strtok(line, ",")) == key) {
+			return strtok(NULL, ",");
+		}
+	}
+	return NULL;
 }
 
 int run_compaction(LSM_Tree *lsm_tree) {
@@ -122,20 +179,24 @@ static char* compact(int num_segment_files, char **segment_files) {
 		return NULL;
 	}
 
-	char *segment_file1 = *(segment_files);
-	char *new_segment, *segment_file2;
+	char *segment_file_a = *(segment_files);
+	char *new_segment, *segment_file_b;
 
 	for (int i = 1; i < num_segment_files; i++) {
-		segment_file2 = *(segment_files + i);
-		new_segment = merge_files(segment_file1, segment_file2);
+		segment_file_b = *(segment_files + i);
+		new_segment = merge_files(segment_file_a, segment_file_b);
 
 		// old segment files no longer needed if new one was
 		// successfully created
-		delete_file(segment_file1);
-		delete_file(segment_file2);
+		if (delete_file(segment_file_a) != 0
+				|| delete_file(segment_file_b) != 0) {
+			printf("Failed to delete old segment files!\n");
+			free(new_segment);
+			return NULL;
+		}
 
 		// new segment will then be merged with consecutive other files
-		segment_file1 = new_segment;
+		segment_file_a = new_segment;
 	}
 	return new_segment;
 }
