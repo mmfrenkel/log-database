@@ -1,9 +1,20 @@
-#ifndef BT_UTILITIES_H
-#define BT_UTILITIES_H
+#ifndef BT_USER_IO_H
+#define BT_USER_IO_H
 
-void die(char *msg);
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "lsm_tree.h"
+
+void print_user_options();
+
+Submission* next_submission(void);
 
 char* get_user_input(char buf[], int buf_size, char *print_message);
+
+int get_key();
+
+char* get_value();
 
 #endif
 

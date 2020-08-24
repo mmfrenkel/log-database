@@ -28,4 +28,3 @@ void clear_tree(Binary_Tree *tree);
 void delete_tree(Binary_Tree *tree);
 
 #endif
-
