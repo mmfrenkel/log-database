@@ -1,13 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <time.h>
 #include "lsm_tree.h"
 #include "binary_tree.h"
-
+#include "custom_io.h"
 
 // prototypes for static functions here
 static char* compact(int num_segment_files, char **segment_files);
 static char* merge_files(char *segment_file1, char *segment_file2);
-
 
 /* Creates an LSM Tree for the program to use, initializing
  * everything properly */
@@ -37,12 +38,12 @@ LSM_Tree* init_lsm_tree() {
 	return lsm_tree;
 }
 
-
 /* Handles the submission provided by user */
 int handle_submission(LSM_Tree *lsm_tree, Submission *submission) {
 
 	if (submission->action == ADD) {
-		if (insert(lsm_tree->memtable, submission->key, submission->value) == 0) {
+		if (insert(lsm_tree->memtable, submission->key, submission->value)
+				== 0) {
 			lsm_tree->memtable->count_keys++;
 		} else {
 			printf("Insertion of new node failed.\n");
@@ -72,10 +73,10 @@ int handle_submission(LSM_Tree *lsm_tree, Submission *submission) {
 		return -1;
 	}
 
-	return run_compaction(lsm_tree);  // this should be in the background -- TO DO
+	return run_compaction(lsm_tree); // this should be in the background -- TO DO
 }
 
-int run_compaction(LSM_Tree *lsm_tree){
+int run_compaction(LSM_Tree *lsm_tree) {
 
 	// Send keys, values in memtable to new segment
 	if (lsm_tree->memtable->count_keys == MAX_KEYS_IN_TREE) {

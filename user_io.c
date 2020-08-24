@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "lsm_tree.h"
+#include "user_io.h"
 
 Submission* next_submission(void) {
 	print_user_options();
@@ -61,8 +62,7 @@ int get_key() {
 char* get_value() {
 	char *value = (char*) malloc(sizeof(char) * MAX_LEN_DATA);
 	get_user_input(value, MAX_LEN_DATA,
-			"Provide some data for submitted key (<%d characters)",
-			MAX_LEN_DATA);
+			"Provide some data for submitted key (<%d characters)");
 
 	return value;
 }

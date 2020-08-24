@@ -10,7 +10,7 @@
 #define MAX_KEYS_IN_TREE 10    // max # keys held in tree before flush to segment
 #define MAX_SEGMENTS 2         // max # full segments before compaction
 #define FILENAME_SIZE 20       // file name size
-#define MAX_LINE_SIZE          // max number of characters in a single line of a segment file
+#define MAX_LINE_SIZE 60       // max number of characters in a single line of a segment file
 
 enum available_actions {
 	ADD, SEARCH, DELETE, SAVE, PRINT_MEMTABLE, EXIT

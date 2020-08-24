@@ -4,7 +4,9 @@ LDFLAGS = -g
 
 all: clean main
 
-main: binary_tree.o custom_io.o user_io.o error.o
+main: lsm_tree.o binary_tree.o custom_io.o user_io.o error.o
+
+lsm_tree.o: lsm_tree.h
 
 binary_tree.o: binary_tree.h
 

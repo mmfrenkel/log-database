@@ -19,9 +19,9 @@ int main(int argc, char *argv[]) {
 			shutdown_lsm_system(lsm_tree);
 			exit(0);
 		} else {
-			int err = handle_submission(lsm_tree, user_submission);
-			if (err) {
-				printf("LSM Tree system returned error %d");
+			int error = handle_submission(lsm_tree, user_submission);
+			if (error) {
+				printf("LSM Tree system returned error %d", error);
 			}
 		}
 	}

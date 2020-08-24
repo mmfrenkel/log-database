@@ -15,8 +15,6 @@
 static void serialize_preorder(BT_Node *root, FILE *fp);
 static void add_to_file(char *filename, char *to_write);
 static void inorder_to_file(BT_Node *root, FILE *fp);
-static char* do_compaction(char *segment_file1, char *segment_file2);
-static void delete_file(char *filename);
 
 /* Writes a binary tree to file */
 void serialize_tree(Binary_Tree *tree, char *filename) {
@@ -111,7 +109,7 @@ void delete_file_contents(char *filename) {
 }
 
 /* Permanently deletes entire file */
-static void delete_file(char *filename) {
+void delete_file(char *filename) {
 	int del = remove(filename);
 	if (del)
 		die("Compacted segment file did not delete properly");
