@@ -7,10 +7,12 @@
 #include "custom_io.h"
 
 // prototypes for static functions here
+static char** init_segments();
 static char* compact(int num_segment_files, char **segment_files);
 static char* merge_files(char *segment_file1, char *segment_file2);
 static char* search_segments(char **segment_files, int full_segments, int key);
 static char* search_segment_file(FILE *segment_ptr, int key);
+static void free_segments(char **segments);
 
 /* Creates an LSM Tree for the program to use, initializing
  * everything properly */
@@ -59,7 +61,8 @@ int handle_submission(LSM_Tree *lsm_tree, Submission *submission) {
 		char *value;
 		if (node == NULL) {
 			// value wasn't in memtable, so look through the log files
-			value = search_segments(lsm_tree->segments, lsm_tree->full_segments, submission->key);
+			value = search_segments(lsm_tree->segments, lsm_tree->full_segments,
+					submission->key);
 		} else {
 			value = node->data;
 		}
@@ -92,45 +95,6 @@ int handle_submission(LSM_Tree *lsm_tree, Submission *submission) {
 
 	// this should be in the background, rather than sequential in future
 	return run_compaction(lsm_tree);
-}
-
-/* Searches existing segment files to see if the key exists.
- * Starts search with most recent segment (newest) */
-static char* search_segments(char **segment_files, int full_segments, int key) {
-	if (full_segments == 0) {
-		return NULL;
-	}
-
-	for (int i = full_segments; i >= 0; i--) {
-
-		FILE *segment_ptr = fopen(*(segment_files + i), "r");
-		char *value = search_segment_file(segment_ptr, key);
-
-		fclose(segment_ptr);
-		if (value != NULL) {
-			return value;
-		}
-	}
-	return NULL;
-}
-
-/* Searches through a segment, if key in segment then return value;
- * uses recursion to look at last line of file first (note that files
- * are assumed to be small and can fit in stack memory. */
-static char* search_segment_file(FILE *segment_ptr, int key) {
-	char line[MAX_LINE_SIZE];
-
-	if (fgets(line, MAX_LINE_SIZE, segment_ptr) != NULL) {
-		char *value = search_segment_file(segment_ptr, key);
-		if (value != NULL) {
-			return value;
-		}
-
-		if (atoi(strtok(line, ",")) == key) {
-			return strtok(NULL, ",");
-		}
-	}
-	return NULL;
 }
 
 int run_compaction(LSM_Tree *lsm_tree) {
@@ -167,6 +131,13 @@ int run_compaction(LSM_Tree *lsm_tree) {
 		clear_tree(lsm_tree->memtable);
 	}
 	return 0;
+}
+
+/* Call to deallocate all memory for LSM tree system*/
+void shutdown_lsm_system(LSM_Tree *lsm_tree) {
+	delete_tree(lsm_tree->memtable);
+	free_segments(lsm_tree->segments);
+	free(lsm_tree);
 }
 
 static char* compact(int num_segment_files, char **segment_files) {
@@ -269,7 +240,47 @@ static char* merge_files(char *filename_a, char *filename_b) {
 	return new_segment;
 }
 
-char** init_segments() {
+/* Searches existing segment files to see if the key exists.
+ * Starts search with most recent segment (newest) */
+static char* search_segments(char **segment_files, int full_segments, int key) {
+	if (full_segments == 0) {
+		return NULL;
+	}
+
+	for (int i = full_segments; i >= 0; i--) {
+
+		FILE *segment_ptr = fopen(*(segment_files + i), "r");
+		char *value = search_segment_file(segment_ptr, key);
+
+		fclose(segment_ptr);
+		if (value != NULL) {
+			return value;
+		}
+	}
+	return NULL;
+}
+
+/* Searches through a segment, if key in segment then return value;
+ * uses recursion to look at last line of file first (note that files
+ * are assumed to be small and can fit in stack memory. */
+static char* search_segment_file(FILE *segment_ptr, int key) {
+	char line[MAX_LINE_SIZE];
+
+	if (fgets(line, MAX_LINE_SIZE, segment_ptr) != NULL) {
+		char *value = search_segment_file(segment_ptr, key);
+		if (value != NULL) {
+			return value;
+		}
+
+		if (atoi(strtok(line, ",")) == key) {
+			return strtok(NULL, ",");
+		}
+	}
+	return NULL;
+}
+
+/* Creates an array of strings to hold segment file names */
+static char** init_segments() {
 	char **segments = (char**) malloc(MAX_SEGMENTS * sizeof(char*));
 	if (segments == NULL) {
 		printf("Allocation of memory for segment files failed.\n");
@@ -281,17 +292,13 @@ char** init_segments() {
 	return segments;
 }
 
-void free_segments(char **segments) {
+/* Frees memory associated with segment file names */
+static void free_segments(char **segments) {
 	for (int i = 0; i < MAX_SEGMENTS; i++) {
 		if (*(segments + i) != NULL) {
 			free(*(segments + i));
 		}
 	}
 	free(segments);
-}
-
-void shutdown_lsm_system(LSM_Tree *lsm_tree) {
-	delete_tree(lsm_tree->memtable);
-	free_segments(lsm_tree->segments);
 }
 

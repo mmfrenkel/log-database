@@ -34,10 +34,6 @@ int handle_submission(LSM_Tree *lsm_tree, Submission *submission);
 
 int run_compaction(LSM_Tree *lsm_tree);
 
-char** init_segments();
-
-void free_segments(char **segments);
-
 void shutdown_lsm_system(LSM_Tree *lsm_tree);
 
 #endif
