@@ -15,7 +15,7 @@ char* compact(int num_segment_files, char **segment_files);
 
 void kv_to_wal(char *wal, int key, char *value);
 
-void tree_to_sorted_strings_table(Binary_Tree *tree, char *filename);
+char* tree_to_sorted_strings_table(Binary_Tree *tree);
 
 void delete_file_contents(char *filename);
 

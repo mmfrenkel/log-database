@@ -9,6 +9,7 @@
 #define MARKER -1
 #define MAX_LINE_SIZE 100
 #define BUF_DATA_SIZE 50
+#define FILENAME_SIZE 20       // file name size
 
 /* prototypes for static functions */
 static void serialize_preorder(BT_Node *root, FILE *fp);
@@ -56,11 +57,21 @@ BT_Node* deserialize_preorder(FILE *fp) {
 
 /* Writes a Tree to a Sorted Strings Table 
  * (key-value pairs in which keys are in sorted order*/
-void tree_to_sorted_strings_table(Binary_Tree *tree, char *filename) {
+char* tree_to_sorted_strings_table(Binary_Tree *tree) {
+	char *filename = (char*) malloc(sizeof(char));
+	if (filename == NULL) {
+		printf("Failed to allocate memory for filename\n");
+		return NULL;
+	}
+
+	sprintf(filename, "%s_%ld.txt", "log", time(NULL));
+
 	FILE *fp;
 	fp = fopen(filename, "w");
 	inorder_to_file(tree->root, fp);
 	fclose(fp);
+
+	return filename;
 }
 
 /* Takes a tree root, traverses tree "inorder" in order to add
