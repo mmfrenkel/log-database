@@ -46,6 +46,9 @@ LSM_Tree* init_lsm_tree() {
  * otherwise returns -1.  */
 int handle_submission(LSM_Tree *lsm_tree, Submission *submission) {
 
+	printf("Memtable current holds %d keys. There are %d segment files",
+			lsm_tree->memtable->count_keys, lsm_tree->full_segments);
+
 	if (submission->action == ADD) {
 		if (insert(lsm_tree->memtable, submission->key, submission->value)
 				== 0) {

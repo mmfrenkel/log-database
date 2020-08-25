@@ -4,7 +4,7 @@
 #include "binary_tree.h"
 
 #define NUM_OPTIONS 6          // number of actions LSM tree can do
-#define LEN_OPTIONS 1          // options are numbered (1 has length 1, 10 has length 2)
+#define STR_BUF 5              // leave plenty of room for options
 #define MAX_LEN_KEYS 10        // max size of key (10 digits)
 #define MAX_LEN_DATA 50        // max length of data for value in database
 #define MAX_KEYS_IN_TREE 10    // max # keys held in tree before flush to segment

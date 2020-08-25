@@ -112,7 +112,7 @@ int delete(Binary_Tree *tree, int key) {
 			tree->root = new_root;
 		} else if (parent == NULL) {
 			// no new root was assigned but we know the node deleted was the root
-			printf("There is no binary tree -- empty...\n");
+			printf("Memtable is empty.\n");
 			tree->root = NULL;
 		}
 	}

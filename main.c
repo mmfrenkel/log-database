@@ -7,7 +7,6 @@
 
 int main(int argc, char *argv[]) {
 	printf("Database System Started!\n");
-
 	LSM_Tree *lsm_tree = init_lsm_tree();
 
 	while (1) {

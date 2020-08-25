@@ -10,8 +10,6 @@ void print_user_options();
 
 Submission* next_submission(void);
 
-char* get_user_input(char buf[], int buf_size, char *print_message);
-
 int get_key();
 
 char* get_value();
