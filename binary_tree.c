@@ -14,6 +14,21 @@ static void pre_order_print(BT_Node *root);
 static void post_order_print(BT_Node *root);
 static void in_order_print(BT_Node *root);
 
+
+Binary_Tree* init_binary_tree() {
+	Binary_Tree *memtable = (Binary_Tree*) malloc(sizeof(Binary_Tree));
+	if (memtable == NULL) {
+		printf("Allocation of memory for memtable failed.\n");
+		return NULL;
+	}
+
+	// initialize values;
+	memtable->count_keys = 0;
+	memtable->root = NULL;
+	return memtable;
+}
+
+
 /* Insert a new node into the binary search tree.
  * Returns -1 if an error occurred, returns 0 if success.*/
 int insert(Binary_Tree *tree, int key, char *data) {
@@ -273,6 +288,9 @@ void delete_tree(Binary_Tree *tree) {
 }
 
 static void delete_btree_nodes(BT_Node *root) {
+	if (root == NULL)
+		return;
+
 	if (root->left_child) {
 		delete_btree_nodes(root->left_child);
 	}

@@ -23,9 +23,9 @@ LSM_Tree* init_lsm_tree() {
 		return NULL;
 	}
 
-	Binary_Tree *memtable = (Binary_Tree*) malloc(sizeof(Binary_Tree));
+	Binary_Tree *memtable = init_binary_tree();
 	if (memtable == NULL) {
-		printf("Allocation of memory for memtable failed.\n");
+		free(lsm_tree);
 		return NULL;
 	}
 
@@ -46,7 +46,7 @@ LSM_Tree* init_lsm_tree() {
  * otherwise returns -1.  */
 int handle_submission(LSM_Tree *lsm_tree, Submission *submission) {
 
-	printf("Memtable current holds %d keys. There are %d segment files",
+	printf("LSM System: Memtable holds %d keys, File system holds %d segments\n;",
 			lsm_tree->memtable->count_keys, lsm_tree->full_segments);
 
 	if (submission->action == ADD) {

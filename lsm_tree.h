@@ -13,7 +13,12 @@
 #define MAX_LINE_SIZE 60       // max number of characters in a single line of a segment file
 
 enum available_actions {
-	ADD, SEARCH, DELETE, SAVE, PRINT_MEMTABLE, EXIT
+	ADD = 1,
+	SEARCH = 2,
+	DELETE = 3,
+	SAVE = 4,
+	PRINT_MEMTABLE = 5,
+	EXIT = 6
 };
 
 typedef struct user_submission {

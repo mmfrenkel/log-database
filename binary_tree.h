@@ -13,6 +13,8 @@ typedef struct binary_tree {
 	int count_keys;
 } Binary_Tree;
 
+Binary_Tree* init_binary_tree();
+
 int insert(Binary_Tree *tree, int key, char *data);
 
 int delete(Binary_Tree *tree, int key);

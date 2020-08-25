@@ -15,6 +15,7 @@ int main(int argc, char *argv[]) {
 		if (user_submission == NULL) {
 			printf("There was an issue with your submission, try again.\n");
 		} else if (user_submission->action == EXIT) {
+			printf("Shutting down...\n");
 			shutdown_lsm_system(lsm_tree);
 			exit(0);
 		} else {
