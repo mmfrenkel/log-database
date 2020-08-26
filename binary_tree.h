@@ -1,6 +1,10 @@
 #ifndef BTREE_H
 #define BTREE_H
 
+#include <stdbool.h>
+
+#define DEL_MARKER "*-*"   // special marker, denoting a key was deleted
+
 typedef struct binary_tree_node {
 	int key;
 	char *data;
@@ -17,7 +21,7 @@ Binary_Tree* init_binary_tree();
 
 int insert(Binary_Tree *tree, int key, char *data);
 
-int delete(Binary_Tree *tree, int key);
+int delete(Binary_Tree *tree, int key, bool hard_delete);
 
 BT_Node* create_bt_node(int key, char *data);
 

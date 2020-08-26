@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <stdbool.h>
 #include "lsm_tree.h"
 #include "binary_tree.h"
 #include "custom_io.h"
@@ -46,12 +47,11 @@ LSM_Tree* init_lsm_tree() {
  * otherwise returns -1.  */
 int handle_submission(LSM_Tree *lsm_tree, Submission *submission) {
 
-	printf("LSM System: Memtable holds %d keys, File system holds %d segments\n;",
+	printf("\n> LSM System Alert: Memtable currently holds %d keys, File system holds %d segments.\n",
 			lsm_tree->memtable->count_keys, lsm_tree->full_segments);
 
 	if (submission->action == ADD) {
-		if (insert(lsm_tree->memtable, submission->key, submission->value)
-				== 0) {
+		if (insert(lsm_tree->memtable, submission->key, submission->value) == 0) {
 			lsm_tree->memtable->count_keys++;
 		} else {
 			printf("Insertion of new node failed.\n");
@@ -77,7 +77,8 @@ int handle_submission(LSM_Tree *lsm_tree, Submission *submission) {
 		}
 
 	} else if (submission->action == DELETE) {
-		if (delete(lsm_tree->memtable, submission->key) == 0) {
+		// always soft delete here; do not decrement keys in tree
+		if (delete(lsm_tree->memtable, submission->key, false) == 0) {
 			lsm_tree->memtable->count_keys--;
 		} else {
 			printf("Deletion of key, value pair with key %d failed.\n",
@@ -190,52 +191,60 @@ static char* merge_files(char *filename_a, char *filename_b) {
 
 	// setup for merge loop
 	char line_seg_a[MAX_LINE_SIZE], line_seg_b[MAX_LINE_SIZE];
-	int keep_merging = 1;
-	int incr_ptr_a = 1, incr_ptr_b = 1;
+	bool keep_merging = true;
+	bool incr_ptr_a = true, incr_ptr_b = true;
 	char *read_result_a = NULL, *read_result_b = NULL;
 
 	// run the merge loop
 	while (keep_merging) {
-		if (incr_ptr_a) {
+		if (incr_ptr_a)
 			read_result_a = fgets(line_seg_a, MAX_LINE_SIZE, seg_ptr_a);
-		}
-		if (incr_ptr_b) {
-			read_result_b = fgets(line_seg_b, MAX_LINE_SIZE, seg_ptr_b);
-		}
-		if (read_result_a == NULL && read_result_b == NULL) {
-			// both files are empty; so ready to be done
-			keep_merging = 0;
 
-		} else if (read_result_a == NULL || read_result_b == NULL) {
+		if (incr_ptr_b)
+			read_result_b = fgets(line_seg_b, MAX_LINE_SIZE, seg_ptr_b);
+
+		if (read_result_a == NULL && read_result_b == NULL)
+			keep_merging = false;
+		else if (read_result_a == NULL || read_result_b == NULL) {
+
 			// add any remaining keys in remaining file to new file
 			FILE *temp_ptr = read_result_a != NULL ? seg_ptr_a : seg_ptr_b;
 			char *temp_line = read_result_b != NULL ? line_seg_a : line_seg_b;
 			do {
 				fputs(temp_line, new_fp);
 			} while (fgets(temp_line, MAX_LINE_SIZE, temp_ptr) != NULL);
+
 			keep_merging = 0;
 		} else {
 			/* merge these two files; figure out which should go into the file
-			 * note that segment file 2 should be "younger" or "newer" than
-			 * segment file 1 so we use that for more up to date data */
-			int key_1 = atoi(strtok(line_seg_a, ","));
-			int key_2 = atoi(strtok(line_seg_b, ","));
-			if (key_1 == key_2) {
-				fputs(line_seg_a, new_fp);
-				incr_ptr_a = 1;
-				incr_ptr_b = 1;
-			} else if (key_1 > key_2) {
-				fputs(line_seg_b, new_fp);
-				incr_ptr_a = 0;
-				incr_ptr_b = 1;
-			} else {  // key_2 > key_1
-				fputs(line_seg_a, new_fp);
-				incr_ptr_a = 1;
-				incr_ptr_b = 0;
+			 * note that segment file b should be "younger" or "newer" than
+			 * segment file a so we use that for more up to date data. If a segment
+			 * currently has a recent "delete" marker, don't add the key to the newly
+			 * created segment.*/
+			int key_a = atoi(strtok(line_seg_a, ","));
+			char *value_a = strtok(NULL, ",");
+
+			int key_b = atoi(strtok(line_seg_b, ","));
+			char *value_b = strtok(NULL, ",");
+
+			if (key_a == key_b) {
+				if (strcmp(value_b, DEL_MARKER) != 0)
+					fputs(line_seg_b, new_fp);
+				incr_ptr_a = true;
+				incr_ptr_b = true;
+			} else if (key_a > key_b) {
+				if ((strcmp(value_b, DEL_MARKER) != 0))
+					fputs(line_seg_b, new_fp);
+				incr_ptr_a = false;
+				incr_ptr_b = true;
+			} else {  // key_a < key_b
+				if (strcmp(value_a, DEL_MARKER) != 0)
+					fputs(line_seg_a, new_fp);
+				incr_ptr_a = true;
+				incr_ptr_b = false;
 			}
 		}
 	}
-
 	// close file pointers for new file and the two segment files
 	fclose(new_fp);
 	fclose(seg_ptr_a);

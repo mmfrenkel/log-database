@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 #include "binary_tree.h"
 #include "error.h"
 
@@ -14,7 +15,6 @@ static void pre_order_print(BT_Node *root);
 static void post_order_print(BT_Node *root);
 static void in_order_print(BT_Node *root);
 
-
 Binary_Tree* init_binary_tree() {
 	Binary_Tree *memtable = (Binary_Tree*) malloc(sizeof(Binary_Tree));
 	if (memtable == NULL) {
@@ -27,7 +27,6 @@ Binary_Tree* init_binary_tree() {
 	memtable->root = NULL;
 	return memtable;
 }
-
 
 /* Insert a new node into the binary search tree.
  * Returns -1 if an error occurred, returns 0 if success.*/
@@ -92,10 +91,11 @@ static BT_Node* do_search(BT_Node *root, int key) {
 	}
 }
 
-/* Remove a node from tree. Returns 0 if success,
- * -1 if failure. */
-int delete(Binary_Tree *tree, int key) {
-
+/* Remove a node from tree. If hard_delete is specified,
+ * then the entire node is removed from the memtable. If it is
+ * a soft delete, then system replaces current value of node with specified
+ * key with a "tombstone". Returns 0 if success, -1 if failure. */
+int delete(Binary_Tree *tree, int key, bool hard_delete) {
 	BT_Node *parent = NULL;
 	BT_Node *trav = tree->root;
 	int is_right_child = 0;
@@ -112,24 +112,26 @@ int delete(Binary_Tree *tree, int key) {
 		}
 	}
 
+	// figure out what to do with it
 	if (trav == NULL) {
-		// didn't find the node to delete
-		printf("Node with key %d does not exist.\n", key);
-		return -1;
-	} else {
-		printf("Found node with key %d, value: %s. Deleting...\n", key,
+		// didn't find the node to delete, so mark deletion by creating a new node with delete marker;
+		return insert(tree, key, DEL_MARKER);
+
+	} else if (hard_delete) {
+		printf("Found node with key %d, value: %s. Hard deleting...\n", key,
 				trav->data);
 		BT_Node *new_root = do_delete(trav, parent, is_right_child);
 
 		// if a new root was assigned, give it to the binary tree
 		if (new_root != NULL) {
-			printf("A new root was assigned.\n");
 			tree->root = new_root;
 		} else if (parent == NULL) {
 			// no new root was assigned but we know the node deleted was the root
-			printf("Memtable is empty.\n");
+			printf("\n> LSM System Alert: Memtable is empty.\n");
 			tree->root = NULL;
 		}
+	} else { // soft delete, just change the value to the delete marker
+		trav->data = DEL_MARKER;
 	}
 	return 0;
 }
@@ -143,7 +145,6 @@ static BT_Node* do_delete(BT_Node *to_delete, BT_Node *parent,
 	if (to_delete->left_child == NULL && to_delete->right_child == NULL) {
 		printf("Node has no children...\n");
 		if (parent == NULL) {
-			printf("Parent is NULL! This is a root\n");
 			// the node to delete is the root; it has no children, continue
 		} else if (is_right_child) {
 			parent->right_child = NULL;
@@ -252,7 +253,7 @@ static void post_order_print(BT_Node *root) {
 	if (root->right_child != NULL) {
 		in_order_print(root->right_child);
 	}
-	printf("( key: %d, value: %s)\n", root->key, root->data);
+	printf("( key: %d, value: %s )\n", root->key, root->data);
 }
 
 /* Allocates memory and creates new node struct */

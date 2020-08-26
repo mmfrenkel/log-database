@@ -31,7 +31,7 @@ Submission* next_submission(void) {
 
 	user_submission->action = user_selection;
 
-	if (user_selection != 6) {
+	if (user_selection == 1 || user_selection == 2 || user_selection == 3) {
 		user_submission->key = get_key();
 	}
 
