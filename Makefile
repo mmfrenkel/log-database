@@ -4,11 +4,11 @@ LDFLAGS = -g
 
 all: clean main
 
-main: lsm_tree.o binary_tree.o custom_io.o user_io.o error.o
+main: lsm_tree.o memtable.o custom_io.o user_io.o error.o
 
 lsm_tree.o: lsm_tree.h
 
-binary_tree.o: binary_tree.h
+memtable.o: memtable.h
 
 custom_io.o: custom_io.h
 
@@ -18,5 +18,5 @@ error.o: error.h
 
 .PHONY: clean
 clean:
-	rm -rf main *.o a.out
+	rm -rf main *.o a.out *.log
 	

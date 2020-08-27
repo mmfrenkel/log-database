@@ -32,7 +32,10 @@ Submission* next_submission(void) {
 	user_submission->action = user_selection;
 
 	if (user_selection == 1 || user_selection == 2 || user_selection == 3) {
-		user_submission->key = get_key();
+		int key = get_key();
+		if (key <= 0)
+			return NULL;
+		user_submission->key = key;
 	}
 
 	if (user_selection == 1) {
@@ -63,7 +66,8 @@ int get_key() {
 	int key = atoi(key_value);
 
 	if (key == 0 || key < 0) {
-		printf("Please provide a numeric-only key value >0");
+		printf("Please provide a numeric-only key value >0.\n");
+		return -1;
 	}
 	return key;
 }

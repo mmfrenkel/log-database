@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
-#include "binary_tree.h"
+#include "memtable.h"
 #include "custom_io.h"
 #include "error.h"
 
@@ -12,20 +12,20 @@
 #define FILENAME_SIZE 20       // file name size
 
 /* prototypes for static functions */
-static void serialize_preorder(BT_Node *root, FILE *fp);
+static void serialize_preorder(MNode *root, FILE *fp);
 static void add_to_file(char *filename, char *to_write);
-static void inorder_to_file(BT_Node *root, FILE *fp);
+static void inorder_to_file(MNode *root, FILE *fp);
 
-/* Writes a binary tree to file */
-void serialize_tree(Binary_Tree *tree, char *filename) {
+/* Writes a memtable (binary tree) to file */
+void serialize_memtable(Memtable *memtable, char *filename) {
 	FILE *fp;
 	fp = fopen(filename, "w");
-	serialize_preorder(tree->root, fp);
+	serialize_preorder(memtable->root, fp);
 	fclose(fp);
 }
 
-/* Writes an entire binary tree to file, preorder */
-static void serialize_preorder(BT_Node *root, FILE *fp) {
+/* Writes an entire memtable (binary tree) to file, preorder */
+static void serialize_preorder(MNode *root, FILE *fp) {
 	if (root == NULL) {
 		fprintf(fp, "%d,%d\n", MARKER, MARKER);
 		return;
@@ -36,8 +36,8 @@ static void serialize_preorder(BT_Node *root, FILE *fp) {
 	serialize_preorder(root->right_child, fp);
 }
 
-/* Reads an entire binary tree to file, expects preorder layout */
-BT_Node* deserialize_preorder(FILE *fp) {
+/* Reads an entire memtable (binary tree) from file, expects preorder layout */
+MNode* deserialize_preorder(FILE *fp) {
 	int key;
 	char buf[BUF_DATA_SIZE];
 
@@ -46,35 +46,35 @@ BT_Node* deserialize_preorder(FILE *fp) {
 	}
 
 	printf("Read in: %d, %s", key, buf);
-	BT_Node *root = create_bt_node(key, buf);
+	MNode *root = create_node(key, buf);
 	root->left_child = deserialize_preorder(fp);
 	root->right_child = deserialize_preorder(fp);
 
 	return root;
 }
 
-/* Writes a Tree to a Sorted Strings Table 
+/* Writes a Memtable to a Sorted Strings Table
  * (key-value pairs in which keys are in sorted order*/
-char* tree_to_sorted_strings_table(Binary_Tree *tree) {
+char* memtable_to_sorted_strings_table(Memtable *memtable) {
 	char *filename = (char*) malloc(sizeof(char));
 	if (filename == NULL) {
 		printf("Failed to allocate memory for filename\n");
 		return NULL;
 	}
 
-	sprintf(filename, "%s_%ld.txt", "log", time(NULL));
+	sprintf(filename, "%ld.log", time(NULL));
 
 	FILE *fp;
 	fp = fopen(filename, "w");
-	inorder_to_file(tree->root, fp);
+	inorder_to_file(memtable->root, fp);
 	fclose(fp);
 
 	return filename;
 }
 
-/* Takes a tree root, traverses tree "inorder" in order to add
- * tree data, ordered by key */
-static void inorder_to_file(BT_Node *root, FILE *fp) {
+/* Takes a memtable (tree) root, traverses tree "inorder" in
+ * order to add data, ordered by key */
+static void inorder_to_file(MNode *root, FILE *fp) {
 	// we've traversed past a root
 	if (root == NULL) {
 		return;

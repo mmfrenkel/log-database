@@ -24,5 +24,6 @@ int main(int argc, char *argv[]) {
 				printf("LSM Tree system returned error %d", error);
 			}
 		}
+		show_status(lsm_tree);
 	}
 }

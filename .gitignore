@@ -7,4 +7,5 @@ a.out
 *.dSYM
 main
 *.txt
+*.log
 

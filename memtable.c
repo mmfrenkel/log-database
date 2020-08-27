@@ -2,21 +2,21 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-#include "binary_tree.h"
+#include "memtable.h"
 #include "error.h"
 
 /* Prototypes for static functions for library */
-static void delete_btree_nodes(BT_Node *root);
-static void do_insert(BT_Node *root, BT_Node *to_insert);
-static BT_Node* do_search(BT_Node *root, int key);
-static BT_Node* do_delete(BT_Node *to_delete, BT_Node *parent,
+static void do_insert(MNode *root, MNode *to_insert);
+static MNode* do_search(MNode *root, int key);
+static MNode* do_hard_delete(MNode *to_delete, MNode *parent,
 		int is_right_child);
-static void pre_order_print(BT_Node *root);
-static void post_order_print(BT_Node *root);
-static void in_order_print(BT_Node *root);
+static void pre_order_print(MNode *root);
+static void post_order_print(MNode *root);
+static void in_order_print(MNode *root);
+static void delete_memtable_nodes(MNode *root);
 
-Binary_Tree* init_binary_tree() {
-	Binary_Tree *memtable = (Binary_Tree*) malloc(sizeof(Binary_Tree));
+Memtable* init_memtable() {
+	Memtable *memtable = (Memtable*) malloc(sizeof(Memtable));
 	if (memtable == NULL) {
 		printf("Allocation of memory for memtable failed.\n");
 		return NULL;
@@ -28,26 +28,26 @@ Binary_Tree* init_binary_tree() {
 	return memtable;
 }
 
-/* Insert a new node into the binary search tree.
+/* Insert a new node into the binary search memtable.
  * Returns -1 if an error occurred, returns 0 if success.*/
-int insert(Binary_Tree *tree, int key, char *data) {
-	BT_Node *new_node = create_bt_node(key, data);
+int insert(Memtable *memtable, int key, char *data) {
+	MNode *new_node = create_node(key, data);
 	if (new_node == NULL) {
 		return -1;  // failed to allocate memory for new node
 	}
 
-	if (!tree->root) {
-		// need to make root for tree
-		tree->root = new_node;
+	if (!memtable->root) {
+		// need to make root for memtable
+		memtable->root = new_node;
 	} else {
-		do_insert(tree->root, new_node);
+		do_insert(memtable->root, new_node);
 	}
 	return 0;
 }
 
-/* Traverse tree recursively in order to place new
+/* Traverse memtable recursively in order to place new
  * node in correct location as new leaf node. */
-static void do_insert(BT_Node *root, BT_Node *to_insert) {
+static void do_insert(MNode *root, MNode *to_insert) {
 
 	// keep going until you find a leaf node
 	if (to_insert->key == root->key) {
@@ -68,13 +68,13 @@ static void do_insert(BT_Node *root, BT_Node *to_insert) {
 	}
 }
 
-/* Search to see if a node is in a tree */
-BT_Node* search(Binary_Tree *tree, int key) {
-	return do_search(tree->root, key);
+/* Search to see if a node is in a memtable */
+MNode* search(Memtable *memtable, int key) {
+	return do_search(memtable->root, key);
 }
 
 /* Recursive helper function to do actual search */
-static BT_Node* do_search(BT_Node *root, int key) {
+static MNode* do_search(MNode *root, int key) {
 
 	if (root->key == key) {
 		return root;
@@ -91,13 +91,13 @@ static BT_Node* do_search(BT_Node *root, int key) {
 	}
 }
 
-/* Remove a node from tree. If hard_delete is specified,
+/* Remove a node from memtable. If hard_delete is specified,
  * then the entire node is removed from the memtable. If it is
  * a soft delete, then system replaces current value of node with specified
  * key with a "tombstone". Returns 0 if success, -1 if failure. */
-int delete(Binary_Tree *tree, int key, bool hard_delete) {
-	BT_Node *parent = NULL;
-	BT_Node *trav = tree->root;
+int delete(Memtable *memtable, int key, bool hard_delete) {
+	MNode *parent = NULL;
+	MNode *trav = memtable->root;
 	int is_right_child = 0;
 
 	// first find the node to delete, if possible
@@ -112,23 +112,26 @@ int delete(Binary_Tree *tree, int key, bool hard_delete) {
 		}
 	}
 
-	// figure out what to do with it
 	if (trav == NULL) {
-		// didn't find the node to delete, so mark deletion by creating a new node with delete marker;
-		return insert(tree, key, DEL_MARKER);
+		// didn't find the node to delete, so mark deletion by creating a
+		// new node with delete marker;
+		int error = insert(memtable, key, DEL_MARKER);
+		if (error != 0)
+			return -1;
+		memtable->count_keys++;
 
 	} else if (hard_delete) {
 		printf("Found node with key %d, value: %s. Hard deleting...\n", key,
 				trav->data);
-		BT_Node *new_root = do_delete(trav, parent, is_right_child);
+		MNode *new_root = do_hard_delete(trav, parent, is_right_child);
 
-		// if a new root was assigned, give it to the binary tree
+		// if a new root was assigned, give it to the binary memtable
 		if (new_root != NULL) {
-			tree->root = new_root;
+			memtable->root = new_root;
 		} else if (parent == NULL) {
 			// no new root was assigned but we know the node deleted was the root
 			printf("\n> LSM System Alert: Memtable is empty.\n");
-			tree->root = NULL;
+			memtable->root = NULL;
 		}
 	} else { // soft delete, just change the value to the delete marker
 		trav->data = DEL_MARKER;
@@ -136,10 +139,10 @@ int delete(Binary_Tree *tree, int key, bool hard_delete) {
 	return 0;
 }
 
-static BT_Node* do_delete(BT_Node *to_delete, BT_Node *parent,
+static MNode* do_hard_delete(MNode *to_delete, MNode *parent,
 		int is_right_child) {
 
-	BT_Node *new_root = NULL;
+	MNode *new_root = NULL;
 
 	/* Case 1: Node has no Children */
 	if (to_delete->left_child == NULL && to_delete->right_child == NULL) {
@@ -181,8 +184,8 @@ static BT_Node* do_delete(BT_Node *to_delete, BT_Node *parent,
 		printf("Node has two children...\n");
 		// Best option is to replace "to_delete" node with the smallest node
 		// in the right subtree, then delete that node.
-		BT_Node *to_swap = to_delete->right_child;
-		BT_Node *trail = to_delete;
+		MNode *to_swap = to_delete->right_child;
+		MNode *trail = to_delete;
 		int is_right_child = 1; // we go right first in our search for smallest node
 
 		while (to_swap->left_child != NULL) {
@@ -196,32 +199,33 @@ static BT_Node* do_delete(BT_Node *to_delete, BT_Node *parent,
 
 		// this node can then be deleted with either case 1 or 2, but we don't free
 		// to_delete here, because it will happen on the next function call
-		return do_delete(to_swap, trail, is_right_child);
+		return do_hard_delete(to_swap, trail, is_right_child);
 	}
 	free(to_delete);
 	return new_root;
 }
 
-void print_tree(Binary_Tree *tree, char *print_type) {
+void print_memtable(Memtable *memtable, char *print_type) {
+	printf("\nCurrent Memtable:\n");
 
-	if (tree->root == NULL) {
-		printf("Tree is empty\n");
+	if (memtable->root == NULL) {
+		printf("memtable is empty\n");
 		return;
 	}
 
 	if (strcmp(print_type, "in_order_traversal") == 0) {
-		in_order_print(tree->root);
+		in_order_print(memtable->root);
 	} else if (strcmp(print_type, "pre_order_traversal") == 0) {
-		pre_order_print(tree->root);
+		pre_order_print(memtable->root);
 	} else if (strcmp(print_type, "post_order_traversal") == 0) {
-		post_order_print(tree->root);
+		post_order_print(memtable->root);
 	} else {
 		printf("Print type %s not recognized", print_type);
 	}
 }
 
-/* Preorder traversal of Tree */
-static void pre_order_print(BT_Node *root) {
+/* Preorder traversal of memtable */
+static void pre_order_print(MNode *root) {
 	printf("( key: %d , value: %s)\n", root->key, root->data);
 
 	if (root->left_child != NULL) {
@@ -232,8 +236,8 @@ static void pre_order_print(BT_Node *root) {
 	}
 }
 
-/* In order traversal of Tree */
-static void in_order_print(BT_Node *root) {
+/* In order traversal of memtable */
+static void in_order_print(MNode *root) {
 	if (root->left_child != NULL) {
 		in_order_print(root->left_child);
 	}
@@ -244,8 +248,8 @@ static void in_order_print(BT_Node *root) {
 	}
 }
 
-/* Postorder traversal of Tree */
-static void post_order_print(BT_Node *root) {
+/* Postorder traversal of memtable */
+static void post_order_print(MNode *root) {
 
 	if (root->left_child != NULL) {
 		in_order_print(root->left_child);
@@ -257,9 +261,9 @@ static void post_order_print(BT_Node *root) {
 }
 
 /* Allocates memory and creates new node struct */
-BT_Node* create_bt_node(int key, char *data) {
+MNode* create_node(int key, char *data) {
 
-	BT_Node *node = (BT_Node*) malloc(sizeof(BT_Node));
+	MNode *node = (MNode*) malloc(sizeof(MNode));
 	if (node == NULL) {
 		printf("Failed to allocate memory for new node.\n");
 		return NULL;
@@ -276,27 +280,29 @@ BT_Node* create_bt_node(int key, char *data) {
 	return node;
 }
 
-/* Keeps tree, but removes all nodes */
-void clear_tree(Binary_Tree *tree) {
-	delete_btree_nodes(tree->root);
-	tree->root = NULL;
+/* Keeps memtable, but removes all nodes */
+void clear_memtable(Memtable *memtable) {
+	delete_memtable_nodes(memtable->root);
+	memtable->root = NULL;
+	memtable->count_keys = 0;
 }
 
-/* Deletes entire tree from memory */
-void delete_tree(Binary_Tree *tree) {
-	delete_btree_nodes(tree->root);
-	free(tree);
+/* Deletes entire memtable from memory */
+void delete_memtable(Memtable *memtable) {
+	delete_memtable_nodes(memtable->root);
+	free(memtable);
 }
 
-static void delete_btree_nodes(BT_Node *root) {
+static void delete_memtable_nodes(MNode *root) {
+	printf("Attempting to free memtable nodes\n");
 	if (root == NULL)
 		return;
 
-	if (root->left_child) {
-		delete_btree_nodes(root->left_child);
+	if (root->left_child != NULL) {
+		delete_memtable_nodes(root->left_child);
 	}
-	if (root->right_child) {
-		delete_btree_nodes(root->right_child);
+	if (root->right_child != NULL) {
+		delete_memtable_nodes(root->right_child);
 	}
 	free(root->data);
 	free(root);
