@@ -56,13 +56,19 @@ MNode* deserialize_preorder(FILE *fp) {
 /* Writes a Memtable to a Sorted Strings Table
  * (key-value pairs in which keys are in sorted order*/
 char* memtable_to_sorted_strings_table(Memtable *memtable) {
-	char *filename = (char*) malloc(sizeof(char));
+
+	/* Length is based on structure of filename below... time returns 10 digit number,
+	 * plus underscore and another 2 digits  + file suffix (3 char)  + \0 = 17 chars */
+	int len_filename = 17;
+	char *filename = (char*) malloc(sizeof(char) * len_filename);
 	if (filename == NULL) {
 		printf("Failed to allocate memory for filename\n");
 		return NULL;
 	}
 
-	sprintf(filename, "%ld.log", time(NULL));
+	// time returns 10 digit number, plus underscore and another 2 digits
+	// + file suffix (3 char)  + \0 = min 17 digits
+	sprintf(filename, "%ld_%d.log", time(NULL), rand() % 10);
 
 	FILE *fp;
 	fp = fopen(filename, "w");

@@ -36,6 +36,8 @@ Submission* next_submission(void) {
 		if (key <= 0)
 			return NULL;
 		user_submission->key = key;
+	} else {
+		user_submission->key = 0;
 	}
 
 	if (user_selection == 1) {
@@ -79,8 +81,8 @@ char* get_value() {
 	char print_string[strlen(substring) + STR_BUF];  // need way to handle this better
 
 	sprintf(print_string, substring, MAX_LEN_DATA);
-	get_user_input(value, MAX_LEN_DATA, print_string);
 
+	get_user_input(value, MAX_LEN_DATA, print_string);
 	return value;
 }
 

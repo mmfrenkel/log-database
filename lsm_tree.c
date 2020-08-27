@@ -111,11 +111,9 @@ int run_compaction(LSM_Tree *lsm_tree) {
 			}
 
 			// assign new segment and clear existing segments
+			free_segments(lsm_tree->segments);
+			lsm_tree->segments = init_segments();
 			*(lsm_tree->segments) = new_segment;
-			for (int i = 1; i < MAX_SEGMENTS; i++) {
-				free(*(lsm_tree->segments + i));
-				*(lsm_tree->segments + i) = NULL;
-			}
 			lsm_tree->full_segments = 1;
 		}
 
@@ -125,7 +123,6 @@ int run_compaction(LSM_Tree *lsm_tree) {
 			printf("Failed at saving memtable to segment.\n");
 			return -1;
 		}
-
 		*(lsm_tree->segments + lsm_tree->full_segments) = filename;
 		lsm_tree->full_segments += 1;
 		clear_memtable(lsm_tree->memtable);
@@ -137,6 +134,13 @@ void show_status(LSM_Tree *lsm_tree) {
 	printf("\n> LSM Tree System Alert: Memtable currently holds %d keys, File system "
 			"holds %d segments.\n", lsm_tree->memtable->count_keys,
 			lsm_tree->full_segments);
+	print_active_segments(lsm_tree);
+}
+
+void print_active_segments(LSM_Tree *lsm_tree) {
+	for (int i = 0; i < lsm_tree->full_segments; i++) {
+		printf("%s\n", lsm_tree->segments[i]);
+	}
 }
 
 /* Call to deallocate all memory for LSM tree system*/
@@ -173,12 +177,13 @@ static char* compact(char **segment_files) {
 static char* merge_files(char *filename_a, char *filename_b) {
 	// open files for segments of interest
 	printf("Merging files %s and %s", filename_a, filename_b);
+
 	FILE *seg_ptr_a = fopen(filename_a, "r");
 	FILE *seg_ptr_b = fopen(filename_b, "r");
 
 	// create a new segment file
 	char *new_segment = (char*) malloc(sizeof(char) * strlen(filename_a));
-	sprintf(new_segment, "%ld.log", time(NULL));
+	sprintf(new_segment, "%ld_%d.log", time(NULL), rand() % 10);
 	FILE *new_fp = fopen(new_segment, "w");
 
 	// setup for merge loop
@@ -203,15 +208,14 @@ static char* merge_files(char *filename_a, char *filename_b) {
 		else if (read_result_a == NULL || read_result_b == NULL) {
 			// add any remaining keys in remaining file to new file
 			FILE *temp_ptr = read_result_a != NULL ? seg_ptr_a : seg_ptr_b;
-			char *temp_line = read_result_b != NULL ? line_seg_a : line_seg_b;
+			char *temp_line = read_result_a != NULL ? line_seg_a : line_seg_b;
 			do {
 				fputs(temp_line, new_fp);
 			} while (fgets(temp_line, MAX_LINE_SIZE, temp_ptr) != NULL);
 
-			keep_merging = 0;
+			keep_merging = false;
 
 		} else {
-			printf("Attempting to merge the lines...\n");
 			merge_lines(line_seg_a, line_seg_b, new_fp, &incr_ptr_a,
 					&incr_ptr_b);
 		}
@@ -228,15 +232,16 @@ static char* merge_files(char *filename_a, char *filename_b) {
  * calling function should increment a or b */
 static void merge_lines(char *line_a, char *line_b, FILE *new_fp, bool *incr_a,
 bool *incr_b) {
-	int key_a = atoi(strtok(line_a, ","));
+	//  need to make copy of lines because strtok() alters char array
+	char line_a_copy[MAX_LINE_SIZE], line_b_copy[MAX_LINE_SIZE];
+	strcpy(line_a_copy, line_a);
+	strcpy(line_b_copy, line_b);
+
+	int key_a = atoi(strtok(line_a_copy, ","));
 	char *value_a = strtok(NULL, ",");
 
-	printf("A: %d, %s\n", key_a, value_a);
-
-	int key_b = atoi(strtok(line_b, ","));
+	int key_b = atoi(strtok(line_b_copy, ","));
 	char *value_b = strtok(NULL, ",");
-
-	printf("B: %d, %s\n", key_b, value_b);
 
 	if (key_a == key_b) {
 		if (strcmp(value_b, DEL_MARKER) != 0)

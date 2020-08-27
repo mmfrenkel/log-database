@@ -294,7 +294,6 @@ void delete_memtable(Memtable *memtable) {
 }
 
 static void delete_memtable_nodes(MNode *root) {
-	printf("Attempting to free memtable nodes\n");
 	if (root == NULL)
 		return;
 
