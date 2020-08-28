@@ -7,7 +7,7 @@
 #define STR_BUF 5              // leave plenty of room for options
 #define MAX_LEN_KEYS 10        // max size of key (10 digits)
 #define MAX_LEN_DATA 50        // max length of data for value in database
-#define MAX_KEYS_IN_TREE 1     // max # keys held in tree before flush to segment
+#define MAX_KEYS_IN_TREE 3     // max # keys held in tree before flush to segment
 #define MAX_SEGMENTS 2         // max # full segments before compaction
 #define FILENAME_SIZE 20       // file name size
 #define MAX_LINE_SIZE 60       // max number of characters in a single line of a segment file

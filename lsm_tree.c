@@ -247,6 +247,7 @@ bool *incr_b) {
 		if (strcmp(value_b, DEL_MARKER) != 0) {
 			printf("value: %s, del_marker: %s\n", value_b, DEL_MARKER);
 			fputs(line_b, new_fp);
+			fputs("\n", new_fp);
 		}
 		*incr_a = true;
 		*incr_b = true;
@@ -254,6 +255,7 @@ bool *incr_b) {
 		if ((strcmp(value_b, DEL_MARKER) != 0)) {
 			printf("value: %s, del_marker: %s\n", value_b, DEL_MARKER);
 			fputs(line_b, new_fp);
+			fputs("\n", new_fp);
 		}
 		*incr_a = false;
 		*incr_b = true;
@@ -261,13 +263,11 @@ bool *incr_b) {
 		if (strcmp(value_a, DEL_MARKER) != 0) {
 			printf("value: %s, del_marker: %s\n", value_a, DEL_MARKER);
 			fputs(line_a, new_fp);
+			fputs("\n", new_fp);
 		}
 		*incr_a = true;
 		*incr_b = false;
 	}
-	// new line char necessary because lines have \n removed on read
-	// and all entries should have their own line
-	fputs("\n", new_fp);
 }
 
 /* Searches existing segment files to see if the key exists.
