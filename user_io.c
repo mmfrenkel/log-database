@@ -99,3 +99,4 @@ static void get_user_input(char *buf, int buf_size, char *print_message) {
 			*p = '\0';
 	}
 }
+

@@ -176,49 +176,49 @@ static char* compact(char **segment_files) {
  * getting out of control. Merges old segments together into new segments.*/
 static char* merge_files(char *filename_a, char *filename_b) {
 	// open files for segments of interest
-	printf("Merging files %s and %s", filename_a, filename_b);
+	printf("Merging files %s and %s...\n", filename_a, filename_b);
 
 	FILE *seg_ptr_a = fopen(filename_a, "r");
 	FILE *seg_ptr_b = fopen(filename_b, "r");
 
 	// create a new segment file
-	char *new_segment = (char*) malloc(sizeof(char) * strlen(filename_a));
+	char *new_segment = (char*) malloc(sizeof(char) * FILENAME_SIZE);
 	sprintf(new_segment, "%ld_%d.log", time(NULL), rand() % 10);
 	FILE *new_fp = fopen(new_segment, "w");
 
 	// setup for merge loop
-	char line_seg_a[MAX_LINE_SIZE], line_seg_b[MAX_LINE_SIZE];
+	char line_a[MAX_LINE_SIZE];
+	char line_b[MAX_LINE_SIZE];
 	bool keep_merging = true;
 	bool incr_ptr_a = true, incr_ptr_b = true;
-	char *read_result_a = NULL, *read_result_b = NULL;
 
 	// run the merge loop
 	while (keep_merging) {
-		if (incr_ptr_a)
-			read_result_a = fgets(line_seg_a, MAX_LINE_SIZE, seg_ptr_a);
-			printf("%d ... Read line A: %s\n", incr_ptr_a, read_result_a);
+		if (incr_ptr_a) {
+			memset(line_a, '\0', MAX_LINE_SIZE);
+			readline_from_file(line_a, MAX_LINE_SIZE, seg_ptr_a, true);
+		}
+		if (incr_ptr_b) {
+			memset(line_b, '\0', MAX_LINE_SIZE);
+			readline_from_file(line_b, MAX_LINE_SIZE, seg_ptr_b, true);
+		}
 
-		if (incr_ptr_b)
-			read_result_b = fgets(line_seg_b, MAX_LINE_SIZE, seg_ptr_b);
-			printf("%d ... Read line B: %s\n", incr_ptr_b, read_result_b);
-
-		if (read_result_a == NULL && read_result_b == NULL)
+		if (!strlen(line_a) && !strlen(line_b))
 			keep_merging = false;
 
-		else if (read_result_a == NULL || read_result_b == NULL) {
+		else if (!strlen(line_a) || !strlen(line_b)) {
 			// add any remaining keys in remaining file to new file
-			FILE *temp_ptr = read_result_a != NULL ? seg_ptr_a : seg_ptr_b;
-			char *temp_line = read_result_a != NULL ? line_seg_a : line_seg_b;
+			FILE *temp_ptr = strlen(line_a) ? seg_ptr_a : seg_ptr_b;
+			char *temp_line = strlen(line_a) ? line_a : line_b;
 			do {
 				fputs(temp_line, new_fp);
+				fputs("\n", new_fp);
 			} while (fgets(temp_line, MAX_LINE_SIZE, temp_ptr) != NULL);
 
 			keep_merging = false;
 
-		} else {
-			merge_lines(line_seg_a, line_seg_b, new_fp, &incr_ptr_a,
-					&incr_ptr_b);
-		}
+		} else
+			merge_lines(line_a, line_b, new_fp, &incr_ptr_a, &incr_ptr_b);
 	}
 	// close file pointers for new file and the two segment files
 	fclose(new_fp);
@@ -244,21 +244,30 @@ bool *incr_b) {
 	char *value_b = strtok(NULL, ",");
 
 	if (key_a == key_b) {
-		if (strcmp(value_b, DEL_MARKER) != 0)
-			fputs(line_a, new_fp);
+		if (strcmp(value_b, DEL_MARKER) != 0) {
+			printf("value: %s, del_marker: %s\n", value_b, DEL_MARKER);
+			fputs(line_b, new_fp);
+		}
 		*incr_a = true;
 		*incr_b = true;
 	} else if (key_a > key_b) {
-		if ((strcmp(value_b, DEL_MARKER) != 0))
+		if ((strcmp(value_b, DEL_MARKER) != 0)) {
+			printf("value: %s, del_marker: %s\n", value_b, DEL_MARKER);
 			fputs(line_b, new_fp);
+		}
 		*incr_a = false;
 		*incr_b = true;
 	} else {  // key_a < key_b
-		if (strcmp(value_a, DEL_MARKER) != 0)
+		if (strcmp(value_a, DEL_MARKER) != 0) {
+			printf("value: %s, del_marker: %s\n", value_a, DEL_MARKER);
 			fputs(line_a, new_fp);
+		}
 		*incr_a = true;
 		*incr_b = false;
 	}
+	// new line char necessary because lines have \n removed on read
+	// and all entries should have their own line
+	fputs("\n", new_fp);
 }
 
 /* Searches existing segment files to see if the key exists.

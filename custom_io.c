@@ -9,7 +9,10 @@
 #define MARKER -1
 #define MAX_LINE_SIZE 100
 #define BUF_DATA_SIZE 50
-#define FILENAME_SIZE 20       // file name size
+
+/* Length is based on structure of filename below... time returns 10 digit number,
+ * plus underscore and another 2 digits  + file suffix (3 char)  + \0 = 17 chars */
+#define FILENAME_SIZE 20
 
 /* prototypes for static functions */
 static void serialize_preorder(MNode *root, FILE *fp);
@@ -56,11 +59,7 @@ MNode* deserialize_preorder(FILE *fp) {
 /* Writes a Memtable to a Sorted Strings Table
  * (key-value pairs in which keys are in sorted order*/
 char* memtable_to_sorted_strings_table(Memtable *memtable) {
-
-	/* Length is based on structure of filename below... time returns 10 digit number,
-	 * plus underscore and another 2 digits  + file suffix (3 char)  + \0 = 17 chars */
-	int len_filename = 17;
-	char *filename = (char*) malloc(sizeof(char) * len_filename);
+	char *filename = (char*) malloc(sizeof(char) * FILENAME_SIZE);
 	if (filename == NULL) {
 		printf("Failed to allocate memory for filename\n");
 		return NULL;
@@ -104,6 +103,20 @@ static void add_to_file(char *filename, char *to_write) {
 
 	fprintf(fp, "%s\n", to_write);
 	fclose(fp);
+}
+
+/* Reads line from an open file, placing it into the string pointed to
+ * by 'line'; note that the new line character may be
+ * removed, if specified. */
+char* readline_from_file(char *line, int buf_size, FILE *fp, bool rm_newline) {
+	fgets(line, buf_size, fp);
+
+	if (rm_newline) {
+		char *p;
+		if ((p = strchr(line, '\n')) != NULL)
+			*p = '\0';
+	}
+	return line;
 }
 
 /* Deletes contents of a file identified by filename,
