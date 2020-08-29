@@ -2,7 +2,7 @@ CC = gcc
 CFLAGS = -g -Wall -std=c11 -fmax-errors=10
 LDFLAGS = -g
 
-all: clean main
+all: clean launch
 
 main: lsm_tree.o memtable.o custom_io.o user_io.o error.o
 
@@ -19,4 +19,8 @@ error.o: error.h
 .PHONY: clean
 clean:
 	rm -rf main *.o a.out *.log
+
+.PHONY: launch
+launch: main
+	./main
 	

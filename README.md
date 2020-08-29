@@ -24,7 +24,7 @@ Here is how the functionality is implemented behind the scenes:
 
 ## Use
 
-This project uses a Makefile to facilitate compilating and running of this program. Run this database system by issuing the following command, which will clean-up any existing files, compile the code and build the executable:
+This project uses a Makefile to facilitate compiling and running this program. Run the database system by issuing the following command, which will clean-up any existing files, compile the code, build the executable, and launch the program:
 
 ```
 $ make all
