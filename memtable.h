@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-#define DEL_MARKER "*-*"   // special marker, denoting a key was deleted
+#define MAX_KEYS_IN_TREE 3     // max # keys held in tree before flush to segment
 
 typedef struct memtable_node {
 	int key;
@@ -21,7 +21,7 @@ Memtable* init_memtable();
 
 int insert(Memtable *memtable, int key, char *data);
 
-int delete(Memtable *memtable, int key, bool hard_delete);
+delete(Memtable *memtable, int key, bool hard_delete, char *tombstone);
 
 MNode* create_node(int key, char *data);
 

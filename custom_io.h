@@ -7,7 +7,7 @@
 #define MARKER -1
 #define BUF_DATA_SIZE 50
 
-void serialize_memtable(Memtable *memtable, char *filename);
+int serialize_memtable(Memtable *memtable, char *filename);
 
 MNode* deserialize_preorder(FILE *fp);
 

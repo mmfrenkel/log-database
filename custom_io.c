@@ -19,12 +19,22 @@ static void serialize_preorder(MNode *root, FILE *fp);
 static void add_to_file(char *filename, char *to_write);
 static void inorder_to_file(MNode *root, FILE *fp);
 
-/* Writes a memtable (binary tree) to file */
-void serialize_memtable(Memtable *memtable, char *filename) {
+/* Writes a memtable (binary tree) to file, in preorder order */
+int serialize_memtable(Memtable *memtable, char *filename) {
 	FILE *fp;
-	fp = fopen(filename, "w");
+	if ((fp = fopen(filename, "w")) == NULL) {
+		printf("Failed to serialized memtable; could "
+				"not open new file.\n");
+		return -1;
+	}
+
 	serialize_preorder(memtable->root, fp);
-	fclose(fp);
+	if (fclose(fp) != 0) {
+		printf("Failed to serialize memtable; could "
+				"not close file.\n");
+		return -1;
+	}
+	return 0;
 }
 
 /* Writes an entire memtable (binary tree) to file, preorder */

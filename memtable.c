@@ -95,7 +95,7 @@ static MNode* do_search(MNode *root, int key) {
  * then the entire node is removed from the memtable. If it is
  * a soft delete, then system replaces current value of node with specified
  * key with a "tombstone". Returns 0 if success, -1 if failure. */
-int delete(Memtable *memtable, int key, bool hard_delete) {
+int delete(Memtable *memtable, int key, bool hard_delete, char *tombstone) {
 	MNode *parent = NULL;
 	MNode *trav = memtable->root;
 	int is_right_child = 0;
@@ -115,7 +115,7 @@ int delete(Memtable *memtable, int key, bool hard_delete) {
 	if (trav == NULL) {
 		// didn't find the node to delete, so mark deletion by creating a
 		// new node with delete marker;
-		int error = insert(memtable, key, DEL_MARKER);
+		int error = insert(memtable, key, tombstone);
 		if (error != 0)
 			return -1;
 		memtable->count_keys++;
@@ -134,9 +134,16 @@ int delete(Memtable *memtable, int key, bool hard_delete) {
 			memtable->root = NULL;
 		}
 	} else { // soft delete, just change the value to the delete marker
-		trav->data = DEL_MARKER;
+		trav->data = tombstone;
 	}
 	return 0;
+}
+
+bool is_full(Memtable *memtable) {
+	if (memtable->count_keys == MAX_KEYS_IN_TREE) {
+		return true;
+	}
+	return false;
 }
 
 static MNode* do_hard_delete(MNode *to_delete, MNode *parent,

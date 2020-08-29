@@ -4,15 +4,17 @@
 #include <time.h>
 #include <stdbool.h>
 #include "lsm_tree.h"
+#include "error.h"
 #include "memtable.h"
 #include "custom_io.h"
 
 // prototypes for static functions here
 static char** init_segments();
-static char* compact(char **segment_files);
+static int execute_action(LSM_Tree *lsm_tree, Submission *submission);
+static char* compact_segments(char **segment_files);
 static char* merge_files(char *segment_file1, char *segment_file2);
-static void merge_lines(char *line_a, char *line_b, FILE *new_fp, bool *incr_a,
-bool *incr_b);
+static void merge_lines(char *line_a, char *line_b,
+		                FILE *new_fp, bool *incr_a, bool *incr_b);
 static char* search_segments(char **segment_files, int full_segments, int key);
 static char* search_segment_file(FILE *segment_ptr, int key);
 static void free_segments(char **segments);
@@ -48,9 +50,44 @@ LSM_Tree* init_lsm_tree() {
 /* Handles the submission provided by user; returns 0 if all succeeds,
  * otherwise returns -1.  */
 int handle_submission(LSM_Tree *lsm_tree, Submission *submission) {
+
+	// do the thing that the user actually requested
+	int error = execute_action(lsm_tree, submission);
+	if (error != 0) {
+		printf("Failed to execute requested user action.\n");
+		return -1;
+	}
+
+	/* make sure the system sends memtable to segment
+	 * and runs compaction without being asked. this should be
+	 * in the background, rather than sequential in future */
+	if (is_full(lsm_tree->memtable)) {
+		if (ready_for_compaction(lsm_tree)) {
+			int error = run_compaction(lsm_tree);
+			if (error != 0) {
+				shutdown_lsm_system(lsm_tree);
+				die("Fatal Error: Compaction step failed! "
+					"Please review logs for errors.\n");
+			}
+		}
+		int error = send_memtable_to_segment(lsm_tree);
+		if (error != 0) {
+			shutdown_lsm_system(lsm_tree);
+			die("Fatal Error: Could not send memtable to segment.\n");
+		}
+	}
+	return 0;
+}
+
+/* Does the action that the user submitted. */
+static int execute_action(LSM_Tree *lsm_tree, Submission *submission) {
 	if (submission->action == ADD) {
-		if (insert(lsm_tree->memtable, submission->key, submission->value)
-				== 0) {
+		if (strcmp(submission->value, TOMBSTONE) == 0) {
+			printf("Cannot insert new record with value equal to the "
+				   "tombstone for this system (%s)\n", TOMBSTONE);
+			return -1;
+		}
+		if (insert(lsm_tree->memtable, submission->key, submission->value) == 0) {
 			lsm_tree->memtable->count_keys++;
 		} else {
 			printf("Insertion of new node failed.\n");
@@ -61,14 +98,13 @@ int handle_submission(LSM_Tree *lsm_tree, Submission *submission) {
 		// search memtable first
 		MNode *node = search(lsm_tree->memtable, submission->key);
 		char *value;
-		if (node == NULL) {
-			// value wasn't in memtable, so look through the log files
+
+		if (node == NULL) { // value wasn't in memtable, so look through the log files
 			value = search_segments(lsm_tree->segments, lsm_tree->full_segments,
 					submission->key);
 		} else {
 			value = node->data;
 		}
-
 		if (value != NULL) {
 			printf("The value for key %d is %s.\n", submission->key, value);
 		} else {
@@ -77,13 +113,12 @@ int handle_submission(LSM_Tree *lsm_tree, Submission *submission) {
 
 	} else if (submission->action == DELETE) {
 		// always soft delete here; do not decrement keys in tree
-		if (delete(lsm_tree->memtable, submission->key, false) != 0) {
-			printf("Deletion of key, value pair with key %d failed.\n",
-					submission->key);
+		if (delete(lsm_tree->memtable, submission->key, false, TOMBSTONE) != 0) {
+			printf("Deletion of key %d failed.\n", submission->key);
 			return -1;
 		}
 
-	} else if (submission->action == SAVE) {
+	} else if (submission->action == FLUSH) {
 		serialize_memtable(lsm_tree->memtable, "memtable.txt");
 
 	} else if (submission->action == PRINT_MEMTABLE) {
@@ -93,48 +128,61 @@ int handle_submission(LSM_Tree *lsm_tree, Submission *submission) {
 		printf("Could not process request in submission.\n");
 		return -1;
 	}
-
-	// this should be in the background, rather than sequential in future
-	return run_compaction(lsm_tree);
-}
-
-int run_compaction(LSM_Tree *lsm_tree) {
-	// Send keys, values in memtable to new segment
-	if (lsm_tree->memtable->count_keys == MAX_KEYS_IN_TREE) {
-
-		// Compact existing files, if necessary, to produce 1 segment file
-		if (lsm_tree->full_segments == MAX_SEGMENTS) {
-			char *new_segment = compact(lsm_tree->segments);
-			if (new_segment == NULL) {
-				printf("Compaction step failed!\n");
-				return -1;
-			}
-
-			// assign new segment and clear existing segments
-			free_segments(lsm_tree->segments);
-			lsm_tree->segments = init_segments();
-			*(lsm_tree->segments) = new_segment;
-			lsm_tree->full_segments = 1;
-		}
-
-		// now send memtable to segment
-		char *filename = memtable_to_sorted_strings_table(lsm_tree->memtable);
-		if (filename == NULL) {
-			printf("Failed at saving memtable to segment.\n");
-			return -1;
-		}
-		*(lsm_tree->segments + lsm_tree->full_segments) = filename;
-		lsm_tree->full_segments += 1;
-		clear_memtable(lsm_tree->memtable);
-	}
 	return 0;
 }
 
+/* Determines if the LSM System has enough segments to
+ * warrant compaction step  */
+bool ready_for_compaction(LSM_Tree *lsm_tree) {
+	if (lsm_tree->full_segments == MAX_SEGMENTS) {
+		return true;
+	}
+	return false;
+}
+
+/* Runs compaction of segments existing in LSM tree */
+int run_compaction(LSM_Tree *lsm_tree) {
+	printf("> LSM System Alert: Running compaction...\n");
+
+	char *new_segment = compact_segments(lsm_tree->segments);
+	if (new_segment == NULL) {
+		return -1;
+	}
+
+	// assign new segment and clear existing segments
+	free_segments(lsm_tree->segments);
+	lsm_tree->segments = init_segments();
+	*(lsm_tree->segments) = new_segment;
+	lsm_tree->full_segments = 1;
+
+	return 0;
+}
+
+/* Sends in-memory memtable (binary tree) to a segment file,
+ * while also reseting the memtable and updating the record
+ * of segment files available within the system. */
+int send_memtable_to_segment(LSM_Tree *lsm_tree) {
+	char *filename = memtable_to_sorted_strings_table(lsm_tree->memtable);
+	if (filename == NULL) {
+		printf("Failed at saving memtable to segment.\n");
+		return -1;
+	}
+
+	// make new segment the next segment in list
+	*(lsm_tree->segments + lsm_tree->full_segments) = filename;
+	lsm_tree->full_segments += 1;
+
+	// clear the existing memtable; ready for new contents
+	clear_memtable(lsm_tree->memtable);
+	return 0;
+}
+
+/* Prints the status of the LSM Tree system (i.e., keys in memtable,
+ * and full segments */
 void show_status(LSM_Tree *lsm_tree) {
 	printf("\n> LSM Tree System Alert: Memtable currently holds %d keys, File system "
 			"holds %d segments.\n", lsm_tree->memtable->count_keys,
 			lsm_tree->full_segments);
-	print_active_segments(lsm_tree);
 }
 
 void print_active_segments(LSM_Tree *lsm_tree) {
@@ -145,25 +193,38 @@ void print_active_segments(LSM_Tree *lsm_tree) {
 
 /* Call to deallocate all memory for LSM tree system*/
 void shutdown_lsm_system(LSM_Tree *lsm_tree) {
+	// send what contents are left in memtable to disk
+	if (lsm_tree->memtable->count_keys != 0) {
+		if (serialize_memtable(lsm_tree->memtable, "latest_memtable_state.log") != 0) {
+			printf("Warning, memtable contents were not successfully saved.\n");
+		}
+	}
 	delete_memtable(lsm_tree->memtable);
 	free_segments(lsm_tree->segments);
 	free(lsm_tree);
 }
 
-static char* compact(char **segment_files) {
-	printf("> LSM System Alert: Running compaction...\n");
-
+/* Takes a list of segment file names and compacts two at
+ * a time, sequentially; deletes files no longer needed */
+static char* compact_segments(char **segment_files) {
 	char *segment_a = *(segment_files);
 	char *new_segment, *segment_b;
 
 	for (int i = 1; i < MAX_SEGMENTS; i++) {
 		segment_b = *(segment_files + i);
-		new_segment = merge_files(segment_a, segment_b);
 
-		// old segment files no longer needed if new one was
-		// successfully created
-		if (delete_file(segment_a) != 0 || delete_file(segment_b) != 0)
-			printf("Failed to delete old segment files!\n");
+		new_segment = merge_files(segment_a, segment_b);
+		if (new_segment == NULL) {
+			return NULL;
+		}
+
+		// if existing file segments fail to delete, this is big problem for disk space.
+		if (delete_file(segment_a) != 0 || delete_file(segment_b) != 0) {
+			printf("Failed to delete old segment files");
+			delete_file(new_segment);
+			free(new_segment);
+			return NULL;
+		}
 
 		// new segment will then be merged with consecutive other files
 		segment_a = new_segment;
@@ -176,13 +237,16 @@ static char* compact(char **segment_files) {
  * getting out of control. Merges old segments together into new segments.*/
 static char* merge_files(char *filename_a, char *filename_b) {
 	// open files for segments of interest
-	printf("Merging files %s and %s...\n", filename_a, filename_b);
-
 	FILE *seg_ptr_a = fopen(filename_a, "r");
 	FILE *seg_ptr_b = fopen(filename_b, "r");
 
 	// create a new segment file
 	char *new_segment = (char*) malloc(sizeof(char) * FILENAME_SIZE);
+	if (new_segment == NULL) {
+		printf("Could not allocate memory for new segment name.\n");
+		return NULL;
+	}
+
 	sprintf(new_segment, "%ld_%d.log", time(NULL), rand() % 10);
 	FILE *new_fp = fopen(new_segment, "w");
 
@@ -220,10 +284,12 @@ static char* merge_files(char *filename_a, char *filename_b) {
 		} else
 			merge_lines(line_a, line_b, new_fp, &incr_ptr_a, &incr_ptr_b);
 	}
-	// close file pointers for new file and the two segment files
-	fclose(new_fp);
-	fclose(seg_ptr_a);
-	fclose(seg_ptr_b);
+	// fclose() returns 0 if closing file is successful
+	if (fclose(new_fp) || fclose(seg_ptr_a) || fclose(seg_ptr_b)) {
+		printf("Failed to close one or more of the compacting files.\n");
+		free(new_segment);
+		return NULL;
+	}
 	return new_segment;
 }
 
@@ -244,24 +310,24 @@ bool *incr_b) {
 	char *value_b = strtok(NULL, ",");
 
 	if (key_a == key_b) {
-		if (strcmp(value_b, DEL_MARKER) != 0) {
-			printf("value: %s, del_marker: %s\n", value_b, DEL_MARKER);
+		if (strcmp(value_b, TOMBSTONE) != 0) {
+			printf("value: %s, del_marker: %s\n", value_b, TOMBSTONE);
 			fputs(line_b, new_fp);
 			fputs("\n", new_fp);
 		}
 		*incr_a = true;
 		*incr_b = true;
 	} else if (key_a > key_b) {
-		if ((strcmp(value_b, DEL_MARKER) != 0)) {
-			printf("value: %s, del_marker: %s\n", value_b, DEL_MARKER);
+		if ((strcmp(value_b, TOMBSTONE) != 0)) {
+			printf("value: %s, del_marker: %s\n", value_b, TOMBSTONE);
 			fputs(line_b, new_fp);
 			fputs("\n", new_fp);
 		}
 		*incr_a = false;
 		*incr_b = true;
 	} else {  // key_a < key_b
-		if (strcmp(value_a, DEL_MARKER) != 0) {
-			printf("value: %s, del_marker: %s\n", value_a, DEL_MARKER);
+		if (strcmp(value_a, TOMBSTONE) != 0) {
+			printf("value: %s, del_marker: %s\n", value_a, TOMBSTONE);
 			fputs(line_a, new_fp);
 			fputs("\n", new_fp);
 		}
