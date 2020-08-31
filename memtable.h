@@ -19,9 +19,11 @@ typedef struct binary_tree {
 
 Memtable* init_memtable();
 
+bool is_full(Memtable *memtable);
+
 int insert(Memtable *memtable, int key, char *data);
 
-delete(Memtable *memtable, int key, bool hard_delete, char *tombstone);
+int delete(Memtable *memtable, int key, bool hard_delete, char *tombstone);
 
 MNode* create_node(int key, char *data);
 

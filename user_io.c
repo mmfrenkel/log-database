@@ -81,7 +81,6 @@ char* get_value() {
 	char print_string[strlen(substring) + STR_BUF];  // need way to handle this better
 
 	sprintf(print_string, substring, MAX_LEN_DATA);
-
 	get_user_input(value, MAX_LEN_DATA, print_string);
 	return value;
 }

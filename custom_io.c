@@ -23,7 +23,7 @@ static void inorder_to_file(MNode *root, FILE *fp);
 int serialize_memtable(Memtable *memtable, char *filename) {
 	FILE *fp;
 	if ((fp = fopen(filename, "w")) == NULL) {
-		printf("Failed to serialized memtable; could "
+		printf("Failed to serialize memtable; could "
 				"not open new file.\n");
 		return -1;
 	}
@@ -80,7 +80,10 @@ char* memtable_to_sorted_strings_table(Memtable *memtable) {
 	sprintf(filename, "%ld_%d.log", time(NULL), rand() % 10);
 
 	FILE *fp;
-	fp = fopen(filename, "w");
+	if ((fp = fopen(filename, "w")) == NULL) {
+		printf("Failed to save memtable to segment.\n");
+		return NULL;
+	}
 	inorder_to_file(memtable->root, fp);
 	fclose(fp);
 
