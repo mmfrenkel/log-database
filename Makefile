@@ -1,26 +1,28 @@
-CC = gcc
-CFLAGS = -g -Wall -std=c11 -fmax-errors=10
-LDFLAGS = -g
+# Makefile inspired by: Chnossos @ https://stackoverflow.com/questions/30573481/path-include-and-src-directory-makefile
 
-all: clean launch
+SRC_DIR = src
+OBJ_DIR = obj
+BIN_DIR = bin
 
-main: lsm_tree.o memtable.o custom_io.o user_io.o error.o
+EXE = $(BIN_DIR)/lsm-system
+SRC = $(wildcard $(SRC_DIR)/*.c)
+OBJ = $(SRC:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 
-lsm_tree.o: lsm_tree.h
+CFLAGS =  -g -Wall -std=c11 -fmax-errors=10
+LDFLAGS =  -g
 
-memtable.o: memtable.h
+.PHONY: all clean
 
-custom_io.o: custom_io.h
+all: $(EXE)
 
-user_io.o: user_io.h
+$(EXE): $(OBJ) | $(BIN_DIR)
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
-error.o: error.h
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
-.PHONY: clean
+$(BIN_DIR) $(OBJ_DIR):
+	mkdir -p $@
+
 clean:
-	rm -rf main *.o a.out *.log
-
-.PHONY: launch
-launch: main
-	./main
-	
+	rm -rv $(BIN_DIR) $(OBJ_DIR)
