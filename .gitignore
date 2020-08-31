@@ -9,4 +9,6 @@ main
 *.txt
 *.log
 .DS_Store
+/bin
+/obj
 
