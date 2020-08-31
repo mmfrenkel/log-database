@@ -132,14 +132,6 @@ char* readline_from_file(char *line, int buf_size, FILE *fp, bool rm_newline) {
 	return line;
 }
 
-/* Deletes contents of a file identified by filename,
- * but keeps the file itself */
-void delete_file_contents(char *filename) {
-	FILE *fp;
-	fp = fopen(filename, "w");
-	fclose(fp);
-}
-
 /* Permanently deletes entire file */
 int delete_file(char *filename) {
 	int del = remove(filename);

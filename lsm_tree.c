@@ -296,8 +296,7 @@ static char* merge_files(char *filename_a, char *filename_b) {
 /* Helper function for merging two files together by adding lines from either file a
  * or file b to the new file, then assigning values to determine whether the
  * calling function should increment a or b */
-static void merge_lines(char *line_a, char *line_b, FILE *new_fp, bool *incr_a,
-bool *incr_b) {
+static void merge_lines(char *line_a, char *line_b, FILE *new_fp, bool *incr_a, bool *incr_b) {
 	//  need to make copy of lines because strtok() alters char array
 	char line_a_copy[MAX_LINE_SIZE], line_b_copy[MAX_LINE_SIZE];
 	strcpy(line_a_copy, line_a);
