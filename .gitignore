@@ -8,7 +8,7 @@ a.out
 main
 *.txt
 *.log
-.DS_Store
+.DS_Store 
 /bin
 /obj
 
