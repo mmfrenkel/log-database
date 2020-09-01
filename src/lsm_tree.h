@@ -1,16 +1,18 @@
 #ifndef LSM_TREE_H
 #define LSM_TREE_H
 
+#include <stdio.h>
 #include "memtable.h"
 
-#define NUM_OPTIONS 6          // number of actions LSM tree can do
-#define STR_BUF 5              // leave plenty of room for options
-#define MAX_LEN_KEYS 10        // max size of key (10 digits)
-#define MAX_LEN_DATA 50        // max length of data for value in database
-#define MAX_SEGMENTS 2         // max # full segments before compaction
-#define FILENAME_SIZE 20       // file name size
-#define MAX_LINE_SIZE 60       // max number of characters in a single line of a segment file
-#define TOMBSTONE "*-*"        // special marker, denoting a key was deleted
+#define NUM_OPTIONS 6          		// number of actions LSM tree can do
+#define STR_BUF 5              		// leave plenty of room for options
+#define MAX_LEN_KEYS 10        		// max size of key (10 digits)
+#define MAX_LEN_DATA 50        		// max length of data for value in database
+#define MAX_SEGMENTS 2         		// max # full segments before compaction
+#define FILENAME_SIZE 20       		// file name size
+#define MAX_LINE_SIZE 100      		// max number of characters in a single line of a segment file
+#define TOMBSTONE "*-*"        		// special marker, denoting a key was deleted
+#define WRITE_AHEAD_LOG "wal.log"   // name of write-ahead-log
 
 enum available_actions {
 	ADD = 1, SEARCH = 2, DELETE = 3, FLUSH = 4, PRINT_MEMTABLE = 5, EXIT = 6
@@ -26,6 +28,7 @@ typedef struct lsm_tree_system {
 	Memtable *memtable;
 	char **segments;
 	int full_segments;
+	FILE *wal;
 } LSM_Tree;
 
 LSM_Tree* init_lsm_tree();

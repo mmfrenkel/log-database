@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 #define MAX_KEYS_IN_TREE 3     // max # keys held in tree before flush to segment
+#define NULL_MARKER -1
 
 typedef struct memtable_node {
 	int key;
@@ -34,5 +35,9 @@ void print_memtable(Memtable *memtable, char *print_type);
 void clear_memtable(Memtable *memtable);
 
 void delete_memtable(Memtable *memtable);
+
+int serialize_memtable(Memtable *memtable, char *filename);
+
+MNode* deserialize_memtable(FILE *fp, int buffer_size);
 
 #endif

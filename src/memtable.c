@@ -14,6 +14,7 @@ static void pre_order_print(MNode *root);
 static void post_order_print(MNode *root);
 static void in_order_print(MNode *root);
 static void delete_memtable_nodes(MNode *root);
+static void serialize_preorder(MNode *root, FILE *fp);
 
 Memtable* init_memtable() {
 	Memtable *memtable = (Memtable*) malloc(sizeof(Memtable));
@@ -314,3 +315,49 @@ static void delete_memtable_nodes(MNode *root) {
 	free(root);
 }
 
+/* Writes a memtable (binary tree) to file, in preorder order */
+int serialize_memtable(Memtable *memtable, char *filename) {
+	FILE *fp;
+	if ((fp = fopen(filename, "w")) == NULL) {
+		printf("Failed to serialize memtable; could "
+				"not open new file.\n");
+		return -1;
+	}
+
+	serialize_preorder(memtable->root, fp);
+	if (fclose(fp) != 0) {
+		printf("Failed to serialize memtable; could "
+				"not close file.\n");
+		return -1;
+	}
+	return 0;
+}
+
+/* Writes an entire memtable (binary tree) to file, preorder */
+static void serialize_preorder(MNode *root, FILE *fp) {
+	if (root == NULL) {
+		fprintf(fp, "%d,%d\n", NULL_MARKER, NULL_MARKER);
+		return;
+	}
+
+	fprintf(fp, "%d,%s\n", root->key, root->data);
+	serialize_preorder(root->left_child, fp);
+	serialize_preorder(root->right_child, fp);
+}
+
+/* Reads an entire memtable (binary tree) from file, expects preorder layout */
+MNode* deserialize_memtable(FILE *fp, int buffer_size) {
+	int key;
+	char buf[buffer_size];
+
+	if (!fscanf(fp, "%d,%s", &key, buf) || key == NULL_MARKER) {
+		return NULL;
+	}
+
+	printf("Read in: %d, %s", key, buf);
+	MNode *root = create_node(key, buf);
+	root->left_child = deserialize_memtable(fp, buffer_size);
+	root->right_child = deserialize_memtable(fp, buffer_size);
+
+	return root;
+}

@@ -6,7 +6,8 @@
 #include "lsm_tree.h"
 #include "error.h"
 #include "memtable.h"
-#include "custom_io.h"
+#include "segment.h"
+#include "wal.h"
 
 // prototypes for static functions here
 static char** init_segments();
@@ -41,9 +42,19 @@ LSM_Tree* init_lsm_tree() {
 		return NULL;
 	}
 
+	FILE *wal = init_wal(WRITE_AHEAD_LOG);
+	if (wal == NULL) {
+		free(lsm_tree);
+		free(memtable);
+		free(segments);
+		return NULL;
+	}
+
 	lsm_tree->memtable = memtable;
 	lsm_tree->segments = segments;
 	lsm_tree->full_segments = 0;
+	lsm_tree->wal = wal;
+
 	return lsm_tree;
 }
 
@@ -51,8 +62,16 @@ LSM_Tree* init_lsm_tree() {
  * otherwise returns -1.  */
 int handle_submission(LSM_Tree *lsm_tree, Submission *submission) {
 
+	// start by writing directly to WAL
+	int error = submission_to_wal(lsm_tree->wal, submission->action,
+			submission->key, submission->value, MAX_LINE_SIZE, true);
+	if (error) {
+		shutdown_lsm_system(lsm_tree);
+		die("Fatal Error: Submission to WAL Failed.\n");
+	}
+
 	// do the thing that the user actually requested
-	int error = execute_action(lsm_tree, submission);
+	error = execute_action(lsm_tree, submission);
 	if (error != 0) {
 		printf("Failed to execute requested user action.\n");
 		return -1;
@@ -67,7 +86,7 @@ int handle_submission(LSM_Tree *lsm_tree, Submission *submission) {
 			if (error != 0) {
 				shutdown_lsm_system(lsm_tree);
 				die("Fatal Error: Compaction step failed! "
-					"Please review logs for errors.\n");
+						"Please review logs for errors.\n");
 			}
 		}
 		int error = send_memtable_to_segment(lsm_tree);
@@ -162,7 +181,7 @@ int run_compaction(LSM_Tree *lsm_tree) {
  * while also reseting the memtable and updating the record
  * of segment files available within the system. */
 int send_memtable_to_segment(LSM_Tree *lsm_tree) {
-	char *filename = memtable_to_sorted_strings_table(lsm_tree->memtable);
+	char *filename = memtable_to_segment(lsm_tree->memtable);
 	if (filename == NULL) {
 		printf("Failed at saving memtable to segment.\n");
 		return -1;
@@ -199,8 +218,13 @@ void shutdown_lsm_system(LSM_Tree *lsm_tree) {
 			printf("Warning, memtable contents were not successfully saved.\n");
 		}
 	}
+
+	fclose(lsm_tree->wal);
+
 	delete_memtable(lsm_tree->memtable);
+
 	free_segments(lsm_tree->segments);
+
 	free(lsm_tree);
 }
 
@@ -219,9 +243,9 @@ static char* compact_segments(char **segment_files) {
 		}
 
 		// if existing file segments fail to delete, this is big problem for disk space.
-		if (delete_file(segment_a) != 0 || delete_file(segment_b) != 0) {
+		if (delete_segment(segment_a) != 0 || delete_segment(segment_b) != 0) {
 			printf("Failed to delete old segment files");
-			delete_file(new_segment);
+			delete_segment(new_segment);
 			free(new_segment);
 			return NULL;
 		}
@@ -260,11 +284,11 @@ static char* merge_files(char *filename_a, char *filename_b) {
 	while (keep_merging) {
 		if (incr_ptr_a) {
 			memset(line_a, '\0', MAX_LINE_SIZE);
-			readline_from_file(line_a, MAX_LINE_SIZE, seg_ptr_a, true);
+			readline_from_segment(line_a, MAX_LINE_SIZE, seg_ptr_a, true);
 		}
 		if (incr_ptr_b) {
 			memset(line_b, '\0', MAX_LINE_SIZE);
-			readline_from_file(line_b, MAX_LINE_SIZE, seg_ptr_b, true);
+			readline_from_segment(line_b, MAX_LINE_SIZE, seg_ptr_b, true);
 		}
 
 		if (!strlen(line_a) && !strlen(line_b))
@@ -310,7 +334,6 @@ static void merge_lines(char *line_a, char *line_b, FILE *new_fp, bool *incr_a, 
 
 	if (key_a == key_b) {
 		if (strcmp(value_b, TOMBSTONE) != 0) {
-			printf("value: %s, del_marker: %s\n", value_b, TOMBSTONE);
 			fputs(line_b, new_fp);
 			fputs("\n", new_fp);
 		}
@@ -318,7 +341,6 @@ static void merge_lines(char *line_a, char *line_b, FILE *new_fp, bool *incr_a, 
 		*incr_b = true;
 	} else if (key_a > key_b) {
 		if ((strcmp(value_b, TOMBSTONE) != 0)) {
-			printf("value: %s, del_marker: %s\n", value_b, TOMBSTONE);
 			fputs(line_b, new_fp);
 			fputs("\n", new_fp);
 		}
@@ -326,7 +348,6 @@ static void merge_lines(char *line_a, char *line_b, FILE *new_fp, bool *incr_a, 
 		*incr_b = true;
 	} else {  // key_a < key_b
 		if (strcmp(value_a, TOMBSTONE) != 0) {
-			printf("value: %s, del_marker: %s\n", value_a, TOMBSTONE);
 			fputs(line_a, new_fp);
 			fputs("\n", new_fp);
 		}

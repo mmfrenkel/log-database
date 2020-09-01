@@ -1,9 +1,9 @@
 #include <stdio.h> 
 #include <stdlib.h>
-#include "custom_io.h"
 #include "error.h"
 #include "user_io.h"
 #include "lsm_tree.h"
+#include "segment.h"
 
 int main(int argc, char *argv[]) {
 	printf("Database System Started!\n");
