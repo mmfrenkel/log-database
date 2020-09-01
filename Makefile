@@ -13,7 +13,7 @@ LDFLAGS =  -g
 
 .PHONY: all clean
 
-all: $(EXE)
+all: clean $(EXE)
 
 $(EXE): $(OBJ) | $(BIN_DIR)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@

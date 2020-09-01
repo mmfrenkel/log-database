@@ -12,6 +12,8 @@ To accept database input, this project currently only supports user interaction 
 
 Here is how the functionality is implemented behind the scenes: 
 
+* `Write Ahead Log`: Any user submission is automatically and immediately written to the system's write-ahead log (WAL). This WAL is a fall-back record of ALL submissions made by a user, in sequential order. Reads from the WAL are not ideal; the WAL is only used as a fail-safe in the case that the program crashes and the contents of the memtable are lost before they are flushed to disk as part of a segment. If the program fails, you can recover any actions taken by users in the `wal.log` file. 
+
 * `Insert`: All new records are inserted into the `memtable` component first. If the insertion results in the `memtable` exceeding a certain size, the `memtable`'s contents are added to a new file on disk called a segment. Because the key, value pairs are written to the segment via an in-order traversal, the keys in the file are sorted.
 
 * `Search`: When searching for the value for a specific key, the system first searches through the `memtable` for that key. If that key isn't found in the `memtable`, the system will search the `segments` in reverse chronological order. This ensures that the system will return the most recent value for a given key, if it exists in the system already.
