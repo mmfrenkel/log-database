@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <time.h>
+
 #include "wal.h"
 
 

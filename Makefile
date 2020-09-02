@@ -13,7 +13,7 @@ LDFLAGS =  -g
 
 .PHONY: all clean
 
-all: clean $(EXE)
+all: clean $(BIN_DIR) $(OBJ_DIR) $(EXE)
 
 $(EXE): $(OBJ) | $(BIN_DIR)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
@@ -25,4 +25,4 @@ $(BIN_DIR) $(OBJ_DIR):
 	mkdir -p $@
 
 clean:
-	rm -rv $(BIN_DIR) $(OBJ_DIR)
+	rm -rv  $(BIN_DIR) $(OBJ_DIR)

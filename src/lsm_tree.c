@@ -3,6 +3,7 @@
 #include <string.h>
 #include <time.h>
 #include <stdbool.h>
+
 #include "lsm_tree.h"
 #include "error.h"
 #include "memtable.h"
@@ -119,6 +120,7 @@ static int execute_action(LSM_Tree *lsm_tree, Submission *submission) {
 		char *value;
 
 		if (node == NULL) { // value wasn't in memtable, so look through the log files
+			printf("Key not in memtable...\n");
 			value = search_segments(lsm_tree->segments, lsm_tree->full_segments,
 					submission->key);
 		} else {
@@ -200,10 +202,11 @@ int send_memtable_to_segment(LSM_Tree *lsm_tree) {
  * and full segments */
 void show_status(LSM_Tree *lsm_tree) {
 	printf("\n> LSM Tree System Alert: Memtable currently holds %d keys, File system "
-			"holds %d segments.\n", lsm_tree->memtable->count_keys,
+			"holds %d segment(s).\n", lsm_tree->memtable->count_keys,
 			lsm_tree->full_segments);
 }
 
+/* Prints out all active segment files */
 void print_active_segments(LSM_Tree *lsm_tree) {
 	for (int i = 0; i < lsm_tree->full_segments; i++) {
 		printf("%s\n", lsm_tree->segments[i]);
@@ -363,7 +366,8 @@ static char* search_segments(char **segment_files, int full_segments, int key) {
 		return NULL;
 	}
 
-	for (int i = full_segments; i >= 0; i--) {
+	// -1 because segment 1 at index 0
+	for (int i = full_segments - 1; i >= 0; i--) {
 		FILE *segment_ptr = fopen(*(segment_files + i), "r");
 		char *value = search_segment_file(segment_ptr, key);
 

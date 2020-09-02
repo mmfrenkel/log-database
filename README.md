@@ -12,7 +12,7 @@ To accept database input, this project currently only supports user interaction 
 
 Here is how the functionality is implemented behind the scenes: 
 
-* `Write Ahead Log`: Any user submission is automatically and immediately written to the system's write-ahead log (WAL). This WAL is a fall-back record of ALL submissions made by a user, in sequential order. Reads from the WAL are not ideal; the WAL is only used as a fail-safe in the case that the program crashes and the contents of the memtable are lost before they are flushed to disk as part of a segment. If the program fails, you can recover any actions taken by users in the `wal.log` file. 
+* `Write Ahead Log`: Any user submission is automatically and immediately written to the system's write-ahead log (`WAL`). This `WAL` is a fall-back record of ALL submissions made by a user, in sequential order. Consequently, reads from the `WAL` are not ideal; the `WAL` is only used as a fail-safe in the case that the program crashes and the contents of the memtable are lost before they are flushed to disk as part of a segment. If the program fails, you can recover any actions taken by users in the `wal.log` file. 
 
 * `Insert`: All new records are inserted into the `memtable` component first. If the insertion results in the `memtable` exceeding a certain size, the `memtable`'s contents are added to a new file on disk called a segment. Because the key, value pairs are written to the segment via an in-order traversal, the keys in the file are sorted.
 
@@ -26,11 +26,19 @@ Here is how the functionality is implemented behind the scenes:
 
 ## Use
 
-This project uses a Makefile to facilitate compiling and running this program. Run the database system by issuing the following command, which will clean-up any existing files, compile the code, build the executable, and launch the program:
+This project uses a Makefile to facilitate compiling and running this program. Run the database system by issuing the following command, which will clean-up any existing files, compile the code, build the executable:
 
 ```
 $ make all
 ```
+This will `clean` the project by deleting the `obj/` and `bin/` files and recreating them.
+
+Launch the program using:
+
+```
+$ ./bin/lsm-system
+```
+
 ## Future Development
 
 This database system was built as an exercise of understanding how LSM Trees work. Currently, this database is a single-threaded system, where the compaction step occurs synchronously with user input. This does not degrade performance of this demo project, as the volume of writes and reads is low (a single user). However, future iterations will explore multithreading in order to allow compaction to run as a background process.

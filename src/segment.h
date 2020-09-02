@@ -2,6 +2,7 @@
 #define CUSTOM_IO_H
 
 #include <stdio.h>
+
 #include "memtable.h"
 
 int serialize_memtable(Memtable *memtable, char *filename);

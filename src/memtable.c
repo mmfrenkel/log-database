@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+
 #include "memtable.h"
 #include "error.h"
 
@@ -71,6 +72,9 @@ static void do_insert(MNode *root, MNode *to_insert) {
 
 /* Search to see if a node is in a memtable */
 MNode* search(Memtable *memtable, int key) {
+	if (memtable->root == NULL) {
+		return NULL;  // there is nothing in memory right now
+	}
 	return do_search(memtable->root, key);
 }
 

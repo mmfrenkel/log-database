@@ -1,9 +1,9 @@
-#include "segment.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
+
+#include "segment.h"
 #include "memtable.h"
 #include "error.h"
 
