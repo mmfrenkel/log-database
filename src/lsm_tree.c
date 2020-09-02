@@ -391,8 +391,16 @@ static char* search_segment_file(FILE *segment_ptr, int key) {
 			return value;
 		}
 
+		// split line to get key value, then check if it's the key
 		if (atoi(strtok(line, ",")) == key) {
-			return strtok(NULL, ",");
+			char *value = strtok(NULL, ",");
+
+			// remove new line character from value before returning
+			char *p;
+			if ((p = strchr(value, '\n')) != NULL)
+				*p = '\0';
+
+			return value;
 		}
 	}
 	return NULL;
