@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdbool.h>
 #include "index.h"
 
@@ -25,7 +26,7 @@ Index* init_index(int size) {
 
 	index->size = size;
 	index->positions_filled = 0;
-	index>contents = contents;
+	index->contents = contents;
 	return index;
 }
 
@@ -49,11 +50,11 @@ int index_insert(Index *index, int key, char *value) {
 	Entry *trav = in_slot;
 	if (trav) {
 		while (trav) {
-			if (trav == key) {
+			if (trav->key == key) {
 				trav->value = value;
 				return 0;
 			}
-			trav->next;
+			trav = trav->next;
 		}
 		// we didn't find the right key so add to chain
 		new_entry->next = in_slot;
@@ -105,7 +106,7 @@ int index_remove(Index *index, int key) {
 	}
 
 	// if we get to here, key is not in table so
-	print("Key to remove not in index");
+	printf("Key to remove not in index");
 	return -1;
 }
 

@@ -32,7 +32,7 @@ Memtable* init_memtable() {
 
 /* Insert a new node into the binary search memtable.
  * Returns -1 if an error occurred, returns 0 if success.*/
-int insert(Memtable *memtable, int key, char *data) {
+int memtable_insert(Memtable *memtable, int key, char *data) {
 	MNode *new_node = create_node(key, data);
 	if (new_node == NULL) {
 		return -1;  // failed to allocate memory for new node
@@ -71,7 +71,7 @@ static void do_insert(MNode *root, MNode *to_insert) {
 }
 
 /* Search to see if a node is in a memtable */
-MNode* search(Memtable *memtable, int key) {
+MNode* search_memtable(Memtable *memtable, int key) {
 	if (memtable->root == NULL) {
 		return NULL;  // there is nothing in memory right now
 	}
@@ -100,7 +100,7 @@ static MNode* do_search(MNode *root, int key) {
  * then the entire node is removed from the memtable. If it is
  * a soft delete, then system replaces current value of node with specified
  * key with a "tombstone". Returns 0 if success, -1 if failure. */
-int delete(Memtable *memtable, int key, bool hard_delete, char *tombstone) {
+int memtable_delete(Memtable *memtable, int key, bool hard_delete, char *tombstone) {
 	MNode *parent = NULL;
 	MNode *trav = memtable->root;
 	int is_right_child = 0;
@@ -120,7 +120,7 @@ int delete(Memtable *memtable, int key, bool hard_delete, char *tombstone) {
 	if (trav == NULL) {
 		// didn't find the node to delete, so mark deletion by creating a
 		// new node with delete marker;
-		int error = insert(memtable, key, tombstone);
+		int error = memtable_insert(memtable, key, tombstone);
 		if (error != 0)
 			return -1;
 		memtable->count_keys++;
@@ -144,7 +144,7 @@ int delete(Memtable *memtable, int key, bool hard_delete, char *tombstone) {
 	return 0;
 }
 
-bool is_full(Memtable *memtable) {
+bool memtable_is_full(Memtable *memtable) {
 	if (memtable->count_keys == MAX_KEYS_IN_TREE) {
 		return true;
 	}
