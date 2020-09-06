@@ -10,7 +10,7 @@
 FILE * init_wal(char *filename) {
 	FILE *wal;
 
-	if ((wal = fopen(filename, "a")) == NULL) {
+	if (!(wal = fopen(filename, "a"))) {
 		printf("Failed to open WAL log.\n");
 		return NULL;
 	}

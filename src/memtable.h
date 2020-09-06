@@ -20,15 +20,15 @@ typedef struct binary_tree {
 
 Memtable* init_memtable();
 
-bool is_full(Memtable *memtable);
+bool memtable_is_full(Memtable *memtable);
 
-int insert(Memtable *memtable, int key, char *data);
+int memtable_insert(Memtable *memtable, int key, char *data);
 
-int delete(Memtable *memtable, int key, bool hard_delete, char *tombstone);
+int memtable_delete(Memtable *memtable, int key, bool hard_delete, char *tombstone);
 
 MNode* create_node(int key, char *data);
 
-MNode* search(Memtable *memtable, int key);
+MNode* search_memtable(Memtable *memtable, int key);
 
 void print_memtable(Memtable *memtable, char *print_type);
 

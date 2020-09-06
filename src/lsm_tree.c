@@ -9,17 +9,15 @@
 #include "memtable.h"
 #include "segment.h"
 #include "wal.h"
+#include "index.h"
 
 // prototypes for static functions here
-static char** init_segments();
 static int execute_action(LSM_Tree *lsm_tree, Submission *submission);
-static char* compact_segments(char **segment_files);
-static char* merge_files(char *segment_file1, char *segment_file2);
-static void merge_lines(char *line_a, char *line_b,
-		                FILE *new_fp, bool *incr_a, bool *incr_b);
-static char* search_segments(char **segment_files, int full_segments, int key);
-static char* search_segment_file(FILE *segment_ptr, int key);
-static void free_segments(char **segments);
+static char* generate_new_segment_name();
+static int update_index(Index *index, Memtable *memtable, char *filename);
+static int add_key_to_index(Index *index, MNode *node, char *filename);
+static int remove_deleted_keys_from_index(Index *index, MNode *root);
+
 
 /* Creates an LSM Tree for the program to use, initializing
  * everything properly */
@@ -36,7 +34,7 @@ LSM_Tree* init_lsm_tree() {
 		return NULL;
 	}
 
-	char **segments = init_segments();
+	char **segments = init_segment_list(MAX_SEGMENTS);
 	if (segments == NULL) {
 		free(lsm_tree);
 		free(memtable);
@@ -51,10 +49,20 @@ LSM_Tree* init_lsm_tree() {
 		return NULL;
 	}
 
+	Index *index = init_index(INDEX_SIZE);
+	if (index == NULL) {
+		free(lsm_tree);
+		free(memtable);
+		free(segments);
+		free(wal);
+		return NULL;
+	}
+
 	lsm_tree->memtable = memtable;
 	lsm_tree->segments = segments;
 	lsm_tree->full_segments = 0;
 	lsm_tree->wal = wal;
+	lsm_tree->index = index;
 
 	return lsm_tree;
 }
@@ -81,7 +89,7 @@ int handle_submission(LSM_Tree *lsm_tree, Submission *submission) {
 	/* make sure the system sends memtable to segment
 	 * and runs compaction without being asked. this should be
 	 * in the background, rather than sequential in future */
-	if (is_full(lsm_tree->memtable)) {
+	if (memtable_is_full(lsm_tree->memtable)) {
 		if (ready_for_compaction(lsm_tree)) {
 			int error = run_compaction(lsm_tree);
 			if (error != 0) {
@@ -90,11 +98,20 @@ int handle_submission(LSM_Tree *lsm_tree, Submission *submission) {
 						"Please review logs for errors.\n");
 			}
 		}
-		int error = send_memtable_to_segment(lsm_tree);
-		if (error != 0) {
+		char *filename = send_memtable_to_segment(lsm_tree);
+		if (!filename) {
 			shutdown_lsm_system(lsm_tree);
 			die("Fatal Error: Could not send memtable to segment.\n");
 		}
+
+		// update index before clearing memtable
+		if (update_index(lsm_tree->index, lsm_tree->memtable, filename) != 0) {
+			shutdown_lsm_system(lsm_tree);
+			die("Fatal Error: Corrupted index.\n");
+		}
+
+		// clear the existing memtable; ready for new contents
+		clear_memtable(lsm_tree->memtable);
 	}
 	return 0;
 }
@@ -107,7 +124,7 @@ static int execute_action(LSM_Tree *lsm_tree, Submission *submission) {
 				   "tombstone for this system (%s)\n", TOMBSTONE);
 			return -1;
 		}
-		if (insert(lsm_tree->memtable, submission->key, submission->value) == 0) {
+		if (memtable_insert(lsm_tree->memtable, submission->key, submission->value) == 0) {
 			lsm_tree->memtable->count_keys++;
 		} else {
 			printf("Insertion of new node failed.\n");
@@ -116,13 +133,11 @@ static int execute_action(LSM_Tree *lsm_tree, Submission *submission) {
 
 	} else if (submission->action == SEARCH) {
 		// search memtable first
-		MNode *node = search(lsm_tree->memtable, submission->key);
+		MNode *node = search_memtable(lsm_tree->memtable, submission->key);
 		char *value;
 
-		if (node == NULL) { // value wasn't in memtable, so look through the log files
-			printf("Key not in memtable...\n");
-			value = search_segments(lsm_tree->segments, lsm_tree->full_segments,
-					submission->key);
+		if (node == NULL) { // value wasn't in memtable, so look in segments
+			value = lsm_tree_search_with_index(lsm_tree, submission->key);
 		} else {
 			value = node->data;
 		}
@@ -134,13 +149,13 @@ static int execute_action(LSM_Tree *lsm_tree, Submission *submission) {
 
 	} else if (submission->action == DELETE) {
 		// always soft delete here; do not decrement keys in tree
-		if (delete(lsm_tree->memtable, submission->key, false, TOMBSTONE) != 0) {
+		if (memtable_delete(lsm_tree->memtable, submission->key, false, TOMBSTONE) != 0) {
 			printf("Deletion of key %d failed.\n", submission->key);
 			return -1;
 		}
 
 	} else if (submission->action == FLUSH) {
-		serialize_memtable(lsm_tree->memtable, "memtable.txt");
+		serialize_memtable(lsm_tree->memtable, LATEST_MEMTABLE);
 
 	} else if (submission->action == PRINT_MEMTABLE) {
 		print_memtable(lsm_tree->memtable, "in_order_traversal");
@@ -161,18 +176,39 @@ bool ready_for_compaction(LSM_Tree *lsm_tree) {
 	return false;
 }
 
+static char* generate_new_segment_name() {
+	char *filename = (char*) malloc(FILENAME_SIZE * sizeof(char));
+	if (filename == NULL) {
+		printf("Failed to allocate memory for new filename\n");
+		return NULL;
+	}
+
+	// time returns 10 digit number, plus underscore and another 2 digits
+	// + file suffix (3 char)  + \0 = min 17 digits
+	sprintf(filename, "%s%ld_%d.log", SEGMENT_LOCATION, time(NULL), rand() % 10);
+	return filename;
+}
+
 /* Runs compaction of segments existing in LSM tree */
 int run_compaction(LSM_Tree *lsm_tree) {
 	printf("> LSM System Alert: Running compaction...\n");
 
-	char *new_segment = compact_segments(lsm_tree->segments);
-	if (new_segment == NULL) {
+	char *new_segment = generate_new_segment_name();
+	if (!new_segment) {
+		printf("Couldn't run compaction without a new segment name.\n");
+		return -1;
+	}
+
+	int error = compact_segments(lsm_tree->segments, MAX_SEGMENTS,
+			new_segment, MAX_LINE_SIZE, TOMBSTONE);
+	if (error) {
+		printf("Error occurred while compacting segment files\n");
 		return -1;
 	}
 
 	// assign new segment and clear existing segments
-	free_segments(lsm_tree->segments);
-	lsm_tree->segments = init_segments();
+	free_segment_list(lsm_tree->segments, MAX_SEGMENTS);
+	lsm_tree->segments = init_segment_list(MAX_SEGMENTS);
 	*(lsm_tree->segments) = new_segment;
 	lsm_tree->full_segments = 1;
 
@@ -182,20 +218,58 @@ int run_compaction(LSM_Tree *lsm_tree) {
 /* Sends in-memory memtable (binary tree) to a segment file,
  * while also reseting the memtable and updating the record
  * of segment files available within the system. */
-int send_memtable_to_segment(LSM_Tree *lsm_tree) {
-	char *filename = memtable_to_segment(lsm_tree->memtable);
-	if (filename == NULL) {
+char* send_memtable_to_segment(LSM_Tree *lsm_tree) {
+	char *new_segment = generate_new_segment_name();
+	if (!new_segment) {
+		printf("Couldn't send memtable to segment.\n");
+		return NULL;
+	}
+
+	int error = remove_deleted_keys_from_index(lsm_tree->index,
+			lsm_tree->memtable->root);
+	if (error)
+		printf("Error occurred in deleting removed keys from index.\n");
+
+	error = memtable_to_segment(lsm_tree->memtable, new_segment);
+	if (error) {
 		printf("Failed at saving memtable to segment.\n");
-		return -1;
+		return NULL;
 	}
 
 	// make new segment the next segment in list
-	*(lsm_tree->segments + lsm_tree->full_segments) = filename;
+	*(lsm_tree->segments + lsm_tree->full_segments) = new_segment;
 	lsm_tree->full_segments += 1;
+	return new_segment;
+}
 
-	// clear the existing memtable; ready for new contents
-	clear_memtable(lsm_tree->memtable);
-	return 0;
+/* Finds the value of a key using the LSM Tree Systems file system index. */
+char* lsm_tree_search_with_index(LSM_Tree *lsm_tree, int key) {
+	char *filename = index_lookup(lsm_tree->index, key);
+	if (!filename) {
+		return NULL;
+	}
+	return search_segment(filename, key, MAX_LINE_SIZE);
+}
+
+/* Searches existing segment files to see if the key exists.
+ * Starts search with most recent segment (newest), but searches until found. */
+char* lsm_tree_linear_search(LSM_Tree *lsm_tree, int key) {
+
+	char **segment_files = lsm_tree->segments;
+	int full_segments = lsm_tree->full_segments;
+
+	if (full_segments == 0) {
+		return NULL;
+	}
+
+	// full_segments -1 because segment 1 at index 0
+	for (int i = full_segments - 1; i >= 0; i--) {
+		char *value = search_segment(*(segment_files + i), key, MAX_LINE_SIZE);
+		if (value != NULL) {
+			return value;
+		}
+	}
+	return NULL;
 }
 
 /* Prints the status of the LSM Tree system (i.e., keys in memtable,
@@ -213,211 +287,51 @@ void print_active_segments(LSM_Tree *lsm_tree) {
 	}
 }
 
+// wrapper function for recursively adding memtable keys to index */
+static int update_index(Index *index, Memtable *memtable, char *filename) {
+	return add_key_to_index(index, memtable->root, filename);
+}
+
+static int add_key_to_index(Index *index, MNode *node, char *filename) {
+	if (node) {
+		if (index_insert(index, node->key, filename) != 0) {
+			printf("Update to index failed. Index may be incomplete.\n");
+			return -1;
+		}
+		add_key_to_index(index, node->left_child, filename);
+		add_key_to_index(index, node->right_child, filename);
+	}
+	return 0;
+}
+
+static int remove_deleted_keys_from_index(Index *index, MNode *root) {
+	if (!root)
+		return 0;
+
+	// if node value is delete marker, then remove it from index, if it exists
+	if (!strcmp(root->data,TOMBSTONE))
+		return index_remove(index, root->key);
+
+	remove_deleted_keys_from_index(index, root->left_child);
+	remove_deleted_keys_from_index(index, root->right_child);
+
+	// val_left or val_right may be -1 if not found or 0; it's okay if it isn't in
+	// the index yet, so do not throw error
+	return 0;
+}
+
 /* Call to deallocate all memory for LSM tree system*/
 void shutdown_lsm_system(LSM_Tree *lsm_tree) {
 	// send what contents are left in memtable to disk
 	if (lsm_tree->memtable->count_keys != 0) {
-		if (serialize_memtable(lsm_tree->memtable, "latest_memtable_state.log") != 0) {
+
+		if (serialize_memtable(lsm_tree->memtable, LATEST_MEMTABLE) != 0) {
 			printf("Warning, memtable contents were not successfully saved.\n");
 		}
 	}
 
 	fclose(lsm_tree->wal);
-
 	delete_memtable(lsm_tree->memtable);
-
-	free_segments(lsm_tree->segments);
-
+	free_segment_list(lsm_tree->segments, MAX_SEGMENTS);
 	free(lsm_tree);
 }
-
-/* Takes a list of segment file names and compacts two at
- * a time, sequentially; deletes files no longer needed */
-static char* compact_segments(char **segment_files) {
-	char *segment_a = *(segment_files);
-	char *new_segment, *segment_b;
-
-	for (int i = 1; i < MAX_SEGMENTS; i++) {
-		segment_b = *(segment_files + i);
-
-		new_segment = merge_files(segment_a, segment_b);
-		if (new_segment == NULL) {
-			return NULL;
-		}
-
-		// if existing file segments fail to delete, this is big problem for disk space.
-		if (delete_segment(segment_a) != 0 || delete_segment(segment_b) != 0) {
-			printf("Failed to delete old segment files");
-			delete_segment(new_segment);
-			free(new_segment);
-			return NULL;
-		}
-
-		// new segment will then be merged with consecutive other files
-		segment_a = new_segment;
-	}
-	return new_segment;
-}
-
-/* Used to perform compaction step of two segment files. This method is
- * necessary for cleaning up old segment files and keeping read I/O from
- * getting out of control. Merges old segments together into new segments.*/
-static char* merge_files(char *filename_a, char *filename_b) {
-	// open files for segments of interest
-	FILE *seg_ptr_a = fopen(filename_a, "r");
-	FILE *seg_ptr_b = fopen(filename_b, "r");
-
-	// create a new segment file
-	char *new_segment = (char*) malloc(sizeof(char) * FILENAME_SIZE);
-	if (new_segment == NULL) {
-		printf("Could not allocate memory for new segment name.\n");
-		return NULL;
-	}
-
-	sprintf(new_segment, "%ld_%d.log", time(NULL), rand() % 10);
-	FILE *new_fp = fopen(new_segment, "w");
-
-	// setup for merge loop
-	char line_a[MAX_LINE_SIZE];
-	char line_b[MAX_LINE_SIZE];
-	bool keep_merging = true;
-	bool incr_ptr_a = true, incr_ptr_b = true;
-
-	// run the merge loop
-	while (keep_merging) {
-		if (incr_ptr_a) {
-			memset(line_a, '\0', MAX_LINE_SIZE);
-			readline_from_segment(line_a, MAX_LINE_SIZE, seg_ptr_a, true);
-		}
-		if (incr_ptr_b) {
-			memset(line_b, '\0', MAX_LINE_SIZE);
-			readline_from_segment(line_b, MAX_LINE_SIZE, seg_ptr_b, true);
-		}
-
-		if (!strlen(line_a) && !strlen(line_b))
-			keep_merging = false;
-
-		else if (!strlen(line_a) || !strlen(line_b)) {
-			// add any remaining keys in remaining file to new file
-			FILE *temp_ptr = strlen(line_a) ? seg_ptr_a : seg_ptr_b;
-			char *temp_line = strlen(line_a) ? line_a : line_b;
-			do {
-				fputs(temp_line, new_fp);
-				fputs("\n", new_fp);
-			} while (fgets(temp_line, MAX_LINE_SIZE, temp_ptr) != NULL);
-
-			keep_merging = false;
-
-		} else
-			merge_lines(line_a, line_b, new_fp, &incr_ptr_a, &incr_ptr_b);
-	}
-	// fclose() returns 0 if closing file is successful
-	if (fclose(new_fp) || fclose(seg_ptr_a) || fclose(seg_ptr_b)) {
-		printf("Failed to close one or more of the compacting files.\n");
-		free(new_segment);
-		return NULL;
-	}
-	return new_segment;
-}
-
-/* Helper function for merging two files together by adding lines from either file a
- * or file b to the new file, then assigning values to determine whether the
- * calling function should increment a or b */
-static void merge_lines(char *line_a, char *line_b, FILE *new_fp, bool *incr_a, bool *incr_b) {
-	//  need to make copy of lines because strtok() alters char array
-	char line_a_copy[MAX_LINE_SIZE], line_b_copy[MAX_LINE_SIZE];
-	strcpy(line_a_copy, line_a);
-	strcpy(line_b_copy, line_b);
-
-	int key_a = atoi(strtok(line_a_copy, ","));
-	char *value_a = strtok(NULL, ",");
-
-	int key_b = atoi(strtok(line_b_copy, ","));
-	char *value_b = strtok(NULL, ",");
-
-	if (key_a == key_b) {
-		if (strcmp(value_b, TOMBSTONE) != 0) {
-			fputs(line_b, new_fp);
-			fputs("\n", new_fp);
-		}
-		*incr_a = true;
-		*incr_b = true;
-	} else if (key_a > key_b) {
-		if ((strcmp(value_b, TOMBSTONE) != 0)) {
-			fputs(line_b, new_fp);
-			fputs("\n", new_fp);
-		}
-		*incr_a = false;
-		*incr_b = true;
-	} else {  // key_a < key_b
-		if (strcmp(value_a, TOMBSTONE) != 0) {
-			fputs(line_a, new_fp);
-			fputs("\n", new_fp);
-		}
-		*incr_a = true;
-		*incr_b = false;
-	}
-}
-
-/* Searches existing segment files to see if the key exists.
- * Starts search with most recent segment (newest) */
-static char* search_segments(char **segment_files, int full_segments, int key) {
-	if (full_segments == 0) {
-		return NULL;
-	}
-
-	// -1 because segment 1 at index 0
-	for (int i = full_segments - 1; i >= 0; i--) {
-		FILE *segment_ptr = fopen(*(segment_files + i), "r");
-		char *value = search_segment_file(segment_ptr, key);
-
-		fclose(segment_ptr);
-		if (value != NULL) {
-			return value;
-		}
-	}
-	return NULL;
-}
-
-/* Searches through a segment, if key in segment then return value;
- * uses recursion to look at last line of file first (note that files
- * are assumed to be small and can fit in stack memory. */
-static char* search_segment_file(FILE *segment_ptr, int key) {
-	char line[MAX_LINE_SIZE];
-
-	if (fgets(line, MAX_LINE_SIZE, segment_ptr) != NULL) {
-		char *value = search_segment_file(segment_ptr, key);
-		if (value != NULL) {
-			return value;
-		}
-
-		if (atoi(strtok(line, ",")) == key) {
-			return strtok(NULL, ",");
-		}
-	}
-	return NULL;
-}
-
-/* Creates an array of strings to hold segment file names */
-static char** init_segments() {
-	char **segments = (char**) malloc(MAX_SEGMENTS * sizeof(char*));
-	if (segments == NULL) {
-		printf("Allocation of memory for segment files failed.\n");
-		return NULL;
-	}
-
-	for (int i = 0; i < MAX_SEGMENTS; i++)
-		*(segments + i) = NULL;
-	return segments;
-}
-
-/* Frees memory associated with segment file names */
-static void free_segments(char **segments) {
-	for (int i = 0; i < MAX_SEGMENTS; i++) {
-		if (*(segments + i) != NULL) {
-			free(*(segments + i));
-		}
-	}
-	free(segments);
-}
-

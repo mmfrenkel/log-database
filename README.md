@@ -1,6 +1,6 @@
 # Mini LSM Tree Database System
 
-This C project represents a simplified version of a log structed merge (LSM) tree database system. 
+This C project is a simplified version of a log-structed merge (LSM) tree database system. 
 
 This system has two components: 
 (1) An in-memory component represented by the `memtable.c` library. To keep things simple for this low-volume system, the `memtable` is implemented as a binary search tree. A two-three tree implementation is also provided in this repositority, though not currently supported. 
@@ -16,7 +16,7 @@ Here is how the functionality is implemented behind the scenes:
 
 * `Insert`: All new records are inserted into the `memtable` component first. If the insertion results in the `memtable` exceeding a certain size, the `memtable`'s contents are added to a new file on disk called a segment. Because the key, value pairs are written to the segment via an in-order traversal, the keys in the file are sorted.
 
-* `Search`: When searching for the value for a specific key, the system first searches through the `memtable` for that key. If that key isn't found in the `memtable`, the system will search the `segments` in reverse chronological order. This ensures that the system will return the most recent value for a given key, if it exists in the system already.
+* `Search`: When searching for the value for a specific key, the system has support for two functionalities: (1) It may search linearly through the `memtable` for that key and if that key isn't found, search the `segments` in reverse chronological order. This ensures that the system will return the most recent value for a given key, if it exists in the system already. (2) The database system holds a hash map that maps hashed keys to the segment file their latest value is in. Although keeping the index updated has a small detriment for writes, it helps reads remarkably. For example, in option (1), the system must open and look through every `segment` before determining that a key doesn't exist in the system. However, in option (2), the system simply sees if the key is in the hash map, an `O(1)` operation. As a result, (2) is used by default.
 
 * `Delete`: If a record is selected for deletion, the program will first search for the key in the `memtable`. If found, it will mark the record with a `tombstone`, a unique value that the system recogizes as a deleted key. This is important, because the `segment` files are read-only; this means that even if a key was deleted from the `memtable` a previous entry for that key could persist in an older `segment`. Hence, the tombstone is important for alerting the system that the key should be removed from the system during the compaction step (see below). 
 
