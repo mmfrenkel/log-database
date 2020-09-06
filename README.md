@@ -1,10 +1,6 @@
 # Mini LSM Tree Database System
 
-This C project is a simplified version of a log-structed merge (LSM) tree database system. 
-
-This system has two components: 
-(1) An in-memory component represented by the `memtable.c` library. To keep things simple for this low-volume system, the `memtable` is implemented as a binary search tree. A two-three tree implementation is also provided in this repositority, though not currently supported. 
-(2) A file system component, made up of several log files called `segments` which contain key, value pairs sorted by key. The contents of the `memtable` are periodically flushed to disk and once written, these `segments` are immutable, or read-only.
+This C project is a simplified version of a log-structed merge (LSM) tree database system. It uses a combination of in-memory data structures and files on disk to hold database submissions.
 
 ## Components & Functionality 
 
@@ -18,9 +14,9 @@ Here is how this system is implemented behind the scenes:
 
 * `Index`: An in-memory index implemented as a hash table to map keys in the database system to the segment they were most recently found in.  Although keeping the index updated has a small detriment for writes, it helps reads remarkably (see `Search` below).
 
-* `Memtable`: An in-memory data structure to hold database submissions, implemented as binary search tree. When the `memtable` is full (i.e., a threshold number of keys are held), the contents of the `memtable` are flushed to disk as a new `segment` (see below). 
+* `Memtable`: An in-memory data structure to hold database submissions, implemented as binary search tree to keep things simple for this low-volume system. When the `memtable` is full (i.e., a threshold number of keys are held), the contents of the `memtable` are flushed to disk as a new `segment` (see below). A two-three tree implementation is also provided in this repositority, though not currently supported. 
 
-* `Segments`: A file on disk containing key, value pairs in ascending key order. Segment files are created via an inorder flush of the `memtable` and compacted (see `Compaction` below) periodically over time to keep the number of files in the database system low.
+* `Segments`: A file on disk containing key, value pairs in ascending key order. Segment files are created via an inorder flush of the `memtable` and compacted (see `Compaction` below) periodically over time to keep the number of files in the database system low. Once written `segments` are immutable, or read-only.
 
 #### Functionality
 
