@@ -154,7 +154,7 @@ static int execute_action(LSM_Tree *lsm_tree, Submission *submission) {
 		}
 
 	} else if (submission->action == FLUSH) {
-		serialize_memtable(lsm_tree->memtable, "memtable.txt");
+		serialize_memtable(lsm_tree->memtable, LATEST_MEMTABLE);
 
 	} else if (submission->action == PRINT_MEMTABLE) {
 		print_memtable(lsm_tree->memtable, "in_order_traversal");
