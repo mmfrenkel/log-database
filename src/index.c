@@ -14,17 +14,16 @@ Index* init_index(int size) {
 
 	// create contents and set all pointers to null
 	Entry **contents = (Entry **) malloc(size * sizeof(Entry*));
-	for (int i = 0; i < size; i++) {
-		*(contents + i) = NULL;
-	}
-
 	if (contents == NULL) {
 		printf("Failed to allocate memory for index contents.\n");
 		free(index);
 		return NULL;
 	}
 
-	index->size = size;
+	for (int i = 0; i < size; i++) {
+		*(contents + i) = NULL;
+	}
+	index->capacity = size;
 	index->positions_filled = 0;
 	index->contents = contents;
 	return index;
@@ -34,16 +33,8 @@ Index* init_index(int size) {
  * collisions, this program uses chaining. */
 int index_insert(Index *index, int key, char *value) {
 
-	int position = hash(key, index->size);
-
-	Entry *new_entry = (Entry*) malloc(sizeof(Entry));
-	if (new_entry == NULL) {
-		printf("Failed to allocate memory for new hash table entry.\n");
-		return -1;
-	}
-	new_entry->key = key;
-	new_entry->value = value;
-	new_entry->next = NULL;
+	/* hash position where key should be */
+	int position = hash(key, index->capacity);
 
 	// see if the key is already in the hash map
 	Entry *in_slot = *(index->contents + position);
@@ -56,12 +47,25 @@ int index_insert(Index *index, int key, char *value) {
 			}
 			trav = trav->next;
 		}
-		// we didn't find the right key so add to chain
-		new_entry->next = in_slot;
 	}
+
+	Entry *new_entry = (Entry*) malloc(sizeof(Entry));
+	if (new_entry == NULL) {
+		printf("Failed to allocate memory for new hash table entry.\n");
+		return -1;
+	}
+	new_entry->key = key;
+	new_entry->value = value;
+	new_entry->next = NULL;
+
+	// we didn't find the right key so add to chain, if there is one
+	if (in_slot)
+		new_entry->next = in_slot;
+
 	// add the new entry to the index
 	*(index->contents + position) = new_entry;
 
+	// update number positions filled for accurate loading
 	if (!in_slot)
 		index->positions_filled++;
 	return 0;
@@ -71,7 +75,7 @@ int index_insert(Index *index, int key, char *value) {
  * in this case, the filename of segment where key is stored */
 char* index_lookup(Index *index, int key) {
 
-	int position = hash(key, index->size);
+	int position = hash(key, index->capacity);
 	Entry *entries = *(index->contents + position);
 
 	while (entries) {
@@ -86,8 +90,7 @@ char* index_lookup(Index *index, int key) {
 }
 
 int index_remove(Index *index, int key) {
-
-	int position = hash(key, index->size);
+	int position = hash(key, index->capacity);
 	Entry *entries = *(index->contents + position);
 	Entry *trail = NULL;
 
@@ -98,6 +101,7 @@ int index_remove(Index *index, int key) {
 			if (entries->next)
 				trail->next = entries->next;
 
+			*(index->contents + position) = trail;
 			free(entries);
 			return 0;
 		}
@@ -105,15 +109,15 @@ int index_remove(Index *index, int key) {
 		entries = entries->next;
 	}
 
-	// if we get to here, key is not in table so
-	printf("Key to remove not in index");
+	// if we get to here, key is not in table so cannot delete it
+	printf("Key to remove (%d) not in index", key);
 	return -1;
 }
 
 bool index_is_full(Index *index) {
-	if (index->positions_filled == index->size) {
+	if (index->positions_filled == index->capacity) {
 		return true;
-	} else if (index->positions_filled / index->size > LOAD_FACTOR) {
+	} else if (index->positions_filled / index->capacity > LOAD_FACTOR) {
 		printf("Warning: Index is getting full.\n");
 	}
 	return false;

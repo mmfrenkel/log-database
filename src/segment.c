@@ -167,11 +167,23 @@ static char* do_search_segment(FILE *segment_ptr, int key, int line_size) {
 static int merge_segments(char *filename_a, char *filename_b,
 						  char *new_segment_name, int line_size, char *tombstone) {
 
-	// open files for segments of interest
-	FILE *seg_ptr_a = fopen(filename_a, "r");
-	FILE *seg_ptr_b = fopen(filename_b, "r");
+	FILE *seg_ptr_a;
+	FILE *seg_ptr_b;
+	FILE *new_fp;
 
-	FILE *new_fp = fopen(new_segment_name, "w");
+	// open files for segments of interest
+	if (!(seg_ptr_a = fopen(filename_a, "r"))) {
+		printf("Could not open up segment: %s", filename_a);
+		return -1;
+	}
+	if (!(seg_ptr_b = fopen(filename_b, "r"))) {
+		printf("Could not open up segment: %s", filename_b);
+		return -1;
+	}
+	if (!(new_fp = fopen(new_segment_name, "w"))) {
+		printf("Could not open up new segment: %s", new_segment_name);
+		return -1;
+	}
 
 	// setup for merge loop
 	char line_a[line_size];

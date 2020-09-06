@@ -16,6 +16,7 @@ static int execute_action(LSM_Tree *lsm_tree, Submission *submission);
 static char* generate_new_segment_name();
 static int update_index(Index *index, Memtable *memtable, char *filename);
 static int add_key_to_index(Index *index, MNode *node, char *filename);
+static int remove_deleted_keys_from_index(Index *index, MNode *root);
 
 
 /* Creates an LSM Tree for the program to use, initializing
@@ -49,7 +50,7 @@ LSM_Tree* init_lsm_tree() {
 	}
 
 	Index *index = init_index(INDEX_SIZE);
-	if (wal == NULL) {
+	if (index == NULL) {
 		free(lsm_tree);
 		free(memtable);
 		free(segments);
@@ -194,7 +195,7 @@ int run_compaction(LSM_Tree *lsm_tree) {
 
 	char *new_segment = generate_new_segment_name();
 	if (!new_segment) {
-		printf("Couldn't run compaction without a new segment.\n");
+		printf("Couldn't run compaction without a new segment name.\n");
 		return -1;
 	}
 
@@ -224,7 +225,12 @@ char* send_memtable_to_segment(LSM_Tree *lsm_tree) {
 		return NULL;
 	}
 
-	int error = memtable_to_segment(lsm_tree->memtable, new_segment);
+	int error = remove_deleted_keys_from_index(lsm_tree->index,
+			lsm_tree->memtable->root);
+	if (error)
+		printf("Error occurred in deleting removed keys from index.\n");
+
+	error = memtable_to_segment(lsm_tree->memtable, new_segment);
 	if (error) {
 		printf("Failed at saving memtable to segment.\n");
 		return NULL;
@@ -295,6 +301,22 @@ static int add_key_to_index(Index *index, MNode *node, char *filename) {
 		add_key_to_index(index, node->left_child, filename);
 		add_key_to_index(index, node->right_child, filename);
 	}
+	return 0;
+}
+
+static int remove_deleted_keys_from_index(Index *index, MNode *root) {
+	if (!root)
+		return 0;
+
+	// if node value is delete marker, then remove it from index, if it exists
+	if (!strcmp(root->data,TOMBSTONE))
+		return index_remove(index, root->key);
+
+	remove_deleted_keys_from_index(index, root->left_child);
+	remove_deleted_keys_from_index(index, root->right_child);
+
+	// val_left or val_right may be -1 if not found or 0; it's okay if it isn't in
+	// the index yet, so do not throw error
 	return 0;
 }
 

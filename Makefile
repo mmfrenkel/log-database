@@ -12,7 +12,7 @@ OBJ = $(SRC:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 CFLAGS =  -g -Wall -std=c11 -fmax-errors=10
 LDFLAGS =  -g
 
-.PHONY: all clean
+.PHONY: all clean delete
 
 all: clean $(BIN_DIR) $(OBJ_DIR) $(LOG_DIR) $(EXE)
 
@@ -26,4 +26,7 @@ $(BIN_DIR) $(OBJ_DIR) $(LOG_DIR):
 	mkdir -p $@
 
 clean:
-	rm -rf $(BIN_DIR) $(OBJ_DIR) $(LOG_DIR)
+	rm -rf $(BIN_DIR) $(OBJ_DIR)
+
+delete:
+	rm -rf $(LOG_DIR)

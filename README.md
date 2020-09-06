@@ -1,6 +1,6 @@
 # Mini LSM Tree Database System
 
-This C project represents a simplified version of a log-structed merge (LSM) tree database system. 
+This C project is a simplified version of a log-structed merge (LSM) tree database system. 
 
 This system has two components: 
 (1) An in-memory component represented by the `memtable.c` library. To keep things simple for this low-volume system, the `memtable` is implemented as a binary search tree. A two-three tree implementation is also provided in this repositority, though not currently supported. 

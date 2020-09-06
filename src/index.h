@@ -13,7 +13,7 @@ typedef struct table_entry {
 } Entry;
 
 typedef struct table {
-	int size;
+	int capacity;
 	int positions_filled;
 	struct table_entry **contents;
 } Index;
