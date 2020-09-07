@@ -1,10 +1,10 @@
 # Mini LSM Tree Database System
 
-This C project is a simplified version of a log-structed merge (LSM) tree database system. It uses a combination of in-memory data structures and files on disk to hold database submissions.
+This C project is a simplified version of a log-structed merge (LSM) tree database system. It uses a combination of in-memory data structures and read-only files on disk to hold database submissions.
 
 ## Components & Functionality 
 
-To accept database input, this project currently only supports user interaction from the command line. Users may elect to add, delete, search or print values into/from the database, until they elect to quit the program.
+To accept database input, this project currently only supports user interaction from the command line. Users may elect to add, delete, search or print values into/from the database, until they decide to quit the program.
 
 Here is how this system is implemented behind the scenes: 
 
@@ -32,14 +32,19 @@ Here is how this system is implemented behind the scenes:
 
 ## Use
 
-This project uses a Makefile to facilitate compiling and running this program. Run the database system by issuing the following command, which will clean-up any existing files, compile the code, build the executable:
+This project uses a Makefile to facilitate compiling and running this program. Compile the lsm-tree database system by issuing the following command, which will clean-up any existing files, compile the code, build the executable:
 
 ```
 $ make all
 ```
-This will `clean` the project by deleting the `obj/` and `bin/` files and recreating them.
+Note that this will `clean` the project by deleting the `obj/` and `bin/` files, but it will not delete any prior database segment files. To do delete all files associated with the database system run:
 
-Launch the program using:
+```
+$ make delete
+
+```
+
+Launch the program via:
 
 ```
 $ ./bin/lsm-system
@@ -47,5 +52,5 @@ $ ./bin/lsm-system
 
 ## Future Development
 
-This database system was built as an exercise of understanding how LSM Trees work. Currently, this database is a single-threaded system, where the compaction step occurs synchronously with user input. This does not degrade performance of this demo project, as the volume of writes and reads is low (a single user). However, future iterations will explore multithreading in order to allow compaction to run as a background process.
+This database system was built as an exercise of understanding how log-structured merge tree systems work. Currently, this database is a single-threaded system, where the compaction step occurs synchronously with user input. This does not degrade performance of this demo project, as the volume of writes and reads is low (a single user). However, future iterations will explore multithreading in order to allow compaction to run as a background process. 
 
